@@ -4,10 +4,8 @@
 
 ## 1. Scaffolding
 
-- [ ] **Blocker: Visual Studio Build Tools mit C++-Workload installieren** — ohne `link.exe`
-      kompiliert kein Rust-Code. Muss manuell erfolgen (GUI-Installer).
-- [ ] Windows-Build verifizieren (`npm run tauri dev` + `npm run tauri build`) — erst nach
-      Build-Tools möglich
+- [ ] `npm run tauri dev` einmal starten (Fenster öffnet sich, Hot-Reload prüfen) —
+      `tauri build` läuft bereits
 - [ ] Android-Target konfigurieren (`tauri android init`), inkl. `networkSecurityConfig`
       für Cleartext-HTTP ins LAN (REQUIREMENTS §3.2) — bewusst nach dem Windows-MVP
 - [ ] GitHub-Repo anlegen und pushen (gh CLI ist auf dem System nicht installiert)
@@ -19,7 +17,6 @@ Plan: [docs/plans/netzwerk-scan.md](./plans/netzwerk-scan.md). Code steht, die A
 ist per `npm run check:model` geprüft — **die Verifikation am echten Gerät fehlt noch**, weil
 ohne Build Tools nichts kompiliert.
 
-- [ ] **Rust-Command `list_local_networks` kompilieren** — nie gebaut, kann Fehler enthalten
 - [ ] Gegen ein echtes Shelly testen: wird es gefunden, stimmt die Generation?
 - [ ] Scan-Dauer im echten Netz messen; Timeout (300 ms) und Parallelität (32) nachjustieren
 

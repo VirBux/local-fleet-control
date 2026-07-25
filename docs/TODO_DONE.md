@@ -32,3 +32,8 @@
       ersetzbar sind
 - [x] 31 Tests grün (25 Discovery-Logik, 6 Komponente inkl. Nachweis, dass Signal-Änderungen
       ohne Zone.js im DOM ankommen)
+- [x] Visual Studio Build Tools installiert; `cargo check` läuft fehler- und warnungsfrei durch —
+      der Rust-Command `list_local_networks` kompiliert
+- [x] **Windows-Build verifiziert:** `npm run tauri build` erzeugt beide Installer
+      (MSI 5,0 MB / NSIS-Setup 3,4 MB, Anwendung selbst 14,2 MB). Damit ist die
+      Toolchain vollständig lauffähig.
