@@ -6,6 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "check:model": "node tools/check-shelly-model.mts",
     "tauri": "tauri"
   },
   "private": true,

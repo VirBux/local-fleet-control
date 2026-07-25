@@ -42,3 +42,75 @@
 .version {
   color: var(--text-muted);
 }
+
+/* --- Spike-Oberfläche: wird durch die richtige Geräteliste ersetzt --- */
+
+.scan-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.scan-controls button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #04160d;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scan-controls button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.scan-controls select {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.network-info,
+.progress {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.error {
+  color: #e5484d;
+}
+
+.hint {
+  color: var(--text-muted);
+}
+
+.device-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.device {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.device-name {
+  font-weight: 600;
+}
+
+.device-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}

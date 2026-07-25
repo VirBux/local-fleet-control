@@ -3,7 +3,59 @@
 </header>
 
 <main class="app-main">
-  <router-outlet />
+  <!-- TEMPORÄRE SPIKE-OBERFLÄCHE (docs/plans/netzwerk-scan.md).
+       Dient dazu, den Netzwerk-Scan gegen echte Geräte zu prüfen. Die Texte sind hier
+       noch hartcodiert und werden mit der i18n-Einführung ersetzt (REQUIREMENTS §4.6);
+       die richtige Geräteliste-UI kommt in einem eigenen Schritt. -->
+  <section class="scan-controls">
+    @if (networks().length > 1) {
+      <select
+        [disabled]="scanning()"
+        (change)="selectNetwork($any($event.target).value)"
+        aria-label="Netzwerk"
+      >
+        @for (network of networks(); track network.ip; let i = $index) {
+          <option [value]="i">{{ network.interface }} — {{ network.ip }}/{{ network.prefixLen }}</option>
+        }
+      </select>
+    } @else if (selectedNetwork(); as network) {
+      <span class="network-info">{{ network.interface }} — {{ network.ip }}/{{ network.prefixLen }}</span>
+    }
+
+    <button type="button" [disabled]="scanning() || !selectedNetwork()" (click)="scan()">
+      {{ scanning() ? 'Suche läuft …' : 'Geräte suchen' }}
+    </button>
+
+    @if (progress(); as p) {
+      <span class="progress">{{ p.done }} / {{ p.total }}</span>
+    }
+  </section>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (networks().length === 0 && !error()) {
+    <p class="hint">Kein nutzbares Netzwerk gefunden.</p>
+  }
+
+  <ul class="device-list">
+    @for (device of devices(); track device.mac) {
+      <li class="device">
+        <span class="device-name">{{ device.name ?? device.ip }}</span>
+        <span class="device-meta">
+          {{ device.model }} · Gen {{ device.generation }} · {{ device.ip }}
+          @if (device.authEnabled) {
+            <span class="locked" title="Passwortgeschützt">🔒</span>
+          }
+        </span>
+      </li>
+    } @empty {
+      @if (!scanning() && progress()) {
+        <li class="hint">Keine Geräte gefunden.</li>
+      }
+    }
+  </ul>
 </main>
 
 <footer class="app-footer">

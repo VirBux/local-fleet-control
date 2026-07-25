@@ -15,14 +15,20 @@
 
 ## 2. Spike Netzwerk-Scan
 
-- [ ] Rust-Command: lokale IP + Subnetzmaske ermitteln
-- [ ] Sweep über /24: `GET http://<ip>/shelly`, Timeout ~300 ms, parallelisiert
-- [ ] Gen-Erkennung aus der Antwort (Gen1 `type` / Gen2+3 `gen`+`model`, `auth`/`auth_en`)
-- [ ] Gegen ein echtes Shelly testen
+Plan: [docs/plans/netzwerk-scan.md](./plans/netzwerk-scan.md). Code steht, die Auswertungslogik
+ist per `npm run check:model` geprüft — **die Verifikation am echten Gerät fehlt noch**, weil
+ohne Build Tools nichts kompiliert.
+
+- [ ] **Rust-Command `list_local_networks` kompilieren** — nie gebaut, kann Fehler enthalten
+- [ ] Gegen ein echtes Shelly testen: wird es gefunden, stimmt die Generation?
+- [ ] Scan-Dauer im echten Netz messen; Timeout (300 ms) und Parallelität (32) nachjustieren
 
 ## 3. Geräteliste-UI
 
+- [ ] **Spike-Oberfläche in `app.component.html` ersetzen** — provisorisch, mit hartcodierten
+      deutschen Texten (Verstoß gegen REQUIREMENTS §4.6, bewusst temporär)
 - [ ] Scan-Ergebnis als Liste (Name, Typ-Icon, Status)
+- [ ] Kanal-Ermittlung bei Mehrkanal-Geräten
 - [ ] Statusabfrage (`/status` bzw. `/rpc/Shelly.GetStatus`)
 - [ ] Ein/Aus für Relais
 
@@ -40,3 +46,12 @@
 
 Siehe [REQUIREMENTS.md §9](./REQUIREMENTS.md#9-offene-entscheidungen-im-projekt-klären-und-hier-nachtragen)
 — jede getroffene Entscheidung dort nachtragen und aus §9 entfernen.
+
+Zusätzlich aufgekommen:
+
+- [ ] **Test-Setup** (Vitest / Karma+Jasmine / Node-Test-Runner). Übergangsweise läuft
+      `npm run check:model` als schlichtes Node-Skript in `tools/`; sobald ein Framework
+      steht, wandern die Fälle dorthin.
+- [ ] **Zoneless Change Detection?** Angular läuft noch mit Zone.js
+      (`provideZoneChangeDetection`). REQUIREMENTS §3 nennt Signals — konsequent wäre
+      `provideZonelessChangeDetection`. Umstellung jetzt trivial, später aufwendiger.
