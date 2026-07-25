@@ -1,0 +1,16 @@
+<header class="app-header">
+  <h1>Local Fleet Control</h1>
+</header>
+
+<main class="app-main">
+  <router-outlet />
+</main>
+
+<footer class="app-footer">
+  <a href="https://ha-fleet-manager.com" (click)="openHomepage($event)">
+    powered by HA Fleet Manager
+  </a>
+  @if (version()) {
+    <span class="version">v{{ version() }}</span>
+  }
+</footer>

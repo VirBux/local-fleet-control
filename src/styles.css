@@ -1,0 +1,41 @@
+/* Farbwelt an HA Fleet Manager angelehnt: Emerald #2FC883 als Akzent.
+   Hell/dunkel folgt der Systemeinstellung (REQUIREMENTS §4.5). */
+:root {
+  --accent: #2fc883;
+  --bg: #ffffff;
+  --text: #1a1d1b;
+  --text-muted: #6b7280;
+  --border: #e4e7e5;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16191a;
+    --text: #ececec;
+    --text-muted: #9aa0a6;
+    --border: #2c3133;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  /* Notfall-App: keine Textauswahl-Artefakte beim Tippen auf dem Handy. */
+  -webkit-tap-highlight-color: transparent;
+}
