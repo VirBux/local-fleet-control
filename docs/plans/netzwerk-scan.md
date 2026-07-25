@@ -58,6 +58,15 @@ Ein Gerät gilt nur dann als Shelly, wenn die Antwort ein Objekt ist und `mac` *
 `type` oder `model` enthält. Damit fallen fremde Geräte raus, die auf jeden Pfad mit
 irgendeinem JSON antworten.
 
+## Bekannte Risiken
+
+- **`AbortSignal.timeout()`** braucht Chromium 103+. Unter Windows (WebView2) unkritisch, auf
+  Android hängt es an der Version der System-WebView. Auf Geräten ohne Play-Store-Updates
+  könnte sie zu alt sein — beim ersten Android-Test prüfen. Fallback wäre ein manueller
+  `AbortController` mit `setTimeout`.
+- **Parallelität 32** ist geschätzt, nicht gemessen. Android reagiert empfindlicher als
+  Windows; der Wert gehört am echten Gerät nachjustiert.
+
 ## Bewusst offen (nicht Teil dieses Schritts)
 
 - Kanal-Ermittlung bei Mehrkanal-Geräten (`/status` bzw. `/rpc/Shelly.GetStatus`) — gehört
