@@ -125,10 +125,40 @@ die robustere Grenze zwischen Angular und der Tauri-Brücke.
 
 - Gespeichert werden: Geräteliste (IP, Typ, Generation, Kanäle), **eigene Anzeigenamen**
   (Default: Gerätename aus der Shelly-Konfig, sonst IP) und **Geräte-Credentials**.
+- **Schlüssel ist immer die MAC-Adresse**, bei Mehrkanalgeräten `MAC:Kanal`. Sie ist der
+  einzige stabile Bezeichner: IP wechselt per DHCP, der Gerätename ist frei änderbar. Gen2/3
+  liefern zusätzlich ein `id`-Feld — das ist die MAC mit Modellpräfix und fehlt bei Gen1.
 - Credentials so sicher wie plattformüblich möglich ablegen (Tauri Stronghold-Plugin oder
   OS-Keystore; Entscheidung dokumentieren).
 - Beim App-Start wird die gespeicherte Liste **sofort** angezeigt (Notfall-Anforderung: keine
   Wartezeit), Erreichbarkeit wird im Hintergrund geprüft; Neu-Scan auf Knopfdruck.
+
+#### 4.4.1 Projektstruktur
+
+**Nachträglich in den MVP aufgenommen** (zuvor kannte §4.4 nur eigene Anzeigenamen). Eine
+Anlage mit 20 Geräten ist als flache Liste unbrauchbar; Räume und Kategorien machen sie
+bedienbar. Detailplan: [docs/plans/projektstruktur.md](./plans/projektstruktur.md).
+
+- Ein **Projekt** bündelt Kategorien, Räume und die Zuordnung der Entitäten. Mehrere Projekte
+  sind möglich, eines ist aktiv. Ein Projekt ist zugleich die Einheit, die das geplante
+  Export/Import-Feature (§5) transportieren wird — ein Integrator betreut mehrere Kunden.
+- **Kategorien und Räume legt der Nutzer selbst an**, sie sind nicht vorgegeben. Sie sind
+  damit Nutzerdaten und bleiben — wie Gerätenamen — von der i18n (§4.6) unberührt.
+- Zugeordnet wird die **Entität** (`MAC:Kanal`), nicht das Gerät: Ein Shelly 2PM kann
+  Kanal 0 im Flur und Kanal 1 im Bad haben.
+- Die Geräteliste zerfällt in Abschnitte mit Überschrift, **umschaltbar nach Raum oder
+  Kategorie** — im Notfall sucht man nach Raum, beim Einrichten nach Kategorie. Ohne aktives
+  Projekt bleibt die Liste flach.
+- Wird eine Kategorie oder ein Raum gelöscht, werden alle Zuordnungen darauf zurückgesetzt.
+- **Ablage: JSON-Datei im App-Datenverzeichnis** über das Tauri-Store-Plugin
+  (`projects.json`), gekapselt in `core/storage.service.ts`. Bewusst **nicht** SQLite: Das
+  Zugriffsmuster ist „alles laden, alles schreiben" auf wenigen Kilobytes — es gibt keine
+  Abfragen, keine Teilmengen. Eine relationale DB brächte sqlx als native Abhängigkeit
+  (Risiko für den noch ausstehenden Android-Build, §3.2) und Schema-Migrationen, ohne ein
+  Problem zu lösen, das wir haben. Erst mit Historie oder Messwerten — beides durch §1
+  ausgeschlossen — wäre die Rechnung eine andere.
+- **Die Datei ist Klartext.** Geräte-Credentials (§4.3) gehören deshalb *nicht* hinein,
+  sondern in den separaten sicheren Speicher (§9).
 
 ### 4.5 UI
 

@@ -8,6 +8,9 @@ pub fn run() {
         // Alle Geräte-HTTP-Aufrufe laufen über dieses Plugin – umgeht CORS,
         // siehe docs/REQUIREMENTS.md §3.
         .plugin(tauri_plugin_http::init())
+        // Projektstruktur als JSON-Datei im App-Datenverzeichnis – anders als
+        // localStorage sicherbar und weitergebbar (REQUIREMENTS §4.4.1).
+        .plugin(tauri_plugin_store::Builder::new().build())
         // Macht die Rust-Funktion für TypeScript aufrufbar (via `invoke`).
         .invoke_handler(tauri::generate_handler![network::list_local_networks])
         .run(tauri::generate_context!())

@@ -42,6 +42,10 @@ export interface ShellyDevice {
   generation: number;
   /** Modellkennung: Gen1 `type` ("SHSW-25"), ab Gen2 `model` ("SNSW-001X16EU"). */
   model: string;
+  /**
+   * Der einzige stabile Bezeichner eines Geräts – IP (DHCP) und Name (frei änderbar)
+   * taugen dafür nicht. In Normalform, siehe `normalizeMac`.
+   */
   mac: string;
   /** Konfigurierter Gerätename – erst ab Gen2 vorhanden. */
   name: string | null;
@@ -78,7 +82,7 @@ export function parseShellyInfo(ip: string, data: unknown): ShellyDevice | null 
       ip,
       generation: 1,
       model: type,
-      mac,
+      mac: normalizeMac(mac),
       name: null,
       authEnabled: raw['auth'] === true,
       firmware: asString(raw['fw']),
@@ -94,11 +98,25 @@ export function parseShellyInfo(ip: string, data: unknown): ShellyDevice | null 
     ip,
     generation,
     model,
-    mac,
+    mac: normalizeMac(mac),
     name: asString(raw['name']),
     authEnabled: raw['auth_en'] === true,
     firmware: asString(raw['ver']),
   };
+}
+
+/**
+ * MAC in Normalform: Großbuchstaben, ohne Trennzeichen.
+ *
+ * Alle bisher beobachteten Geräte liefern sie ohnehin so. Aber an dieser Schreibweise
+ * hängen die gespeicherten Projekt-Zuordnungen (docs/plans/projektstruktur.md), und eine
+ * Zuordnung, die nach einem Firmware-Update ins Leere zeigt, wäre ein übler Fehler.
+ * Bleibt nichts Verwertbares übrig, gilt der Ursprungswert – dann ist das Gerät zwar
+ * seltsam, aber immer noch unterscheidbar.
+ */
+function normalizeMac(mac: string): string {
+  const normalized = mac.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+  return normalized || mac;
 }
 
 function asString(value: unknown): string | null {

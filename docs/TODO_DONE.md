@@ -48,3 +48,28 @@
       `.env`-Dateien in Arbeitsstand und Historie. Gefunden und behoben: private E-Mail in
       den Commit-Metadaten — Historie auf `info@ha-fleet-manager.com` umgeschrieben.
 - [x] **Repository veröffentlicht:** https://github.com/VirBux/local-fleet-control (public)
+- [x] **Statusabfrage und Kanal-Ermittlung** (`shelly/status.model.ts`): Gen1 aus `relays[].ison`,
+      Gen2/3 aus den Schlüsseln `switch:<id>`. Mehrkanalgeräte werden auf je einen
+      Listeneintrag pro Kanal aufgefaltet; Geräte ohne Schaltausgang erscheinen als
+      „erkannt, nicht steuerbar" mit Typ-Info (`pm1`, `light` …). Siehe
+      [Plan](./plans/geraete-schalten.md)
+- [x] **Ein/Aus/Umschalten für Relais** (`shelly/control.service.ts`) — der erste schreibende
+      Zugriff des Projekts. Nach jedem Befehl wird der Zustand neu abgefragt statt geraten
+      (REQUIREMENTS §4.2); eigenes Zeitlimit von 5 s statt der Sweep-Werte; Fehler und
+      passwortgeschützte Geräte hängen am einzelnen Gerät, nicht an der Liste.
+      **Am echten Gerät verifiziert:** Schalten funktioniert. 108 Tests grün (32 mehr als zuvor)
+- [x] **Projektstruktur** ([Plan](./plans/projektstruktur.md), Scope-Erweiterung, in
+      REQUIREMENTS §4.4.1 nachgetragen): Projekte mit frei anlegbaren Kategorien und Räumen,
+      Freitext-Namen je Entität, Geräteliste zerfällt in Abschnitte — umschaltbar nach Raum
+      oder Kategorie. Schlüssel ist die MAC bzw. `MAC:Kanal`, damit Zuordnungen einen
+      IP-Wechsel überleben; die MAC wird beim Auswerten von `GET /shelly` normalisiert.
+      Ablage gekapselt in `core/storage.service.ts`. 152 Tests grün
+- [x] **Entscheidung Ablage: Tauri-Store-Plugin statt `localStorage` — und bewusst nicht
+      SQLite.** `localStorage` liegt im WebView-Profil und ist damit weder sicherbar noch
+      weitergebbar; für Export/Import (REQUIREMENTS §5) unbrauchbar. SQLite wurde geprüft und
+      verworfen: Das Zugriffsmuster ist „alles laden, alles schreiben" auf wenigen Kilobytes,
+      und sqlx als native Abhängigkeit wäre ein Risiko für den noch ausstehenden
+      Android-Build. Jetzt eine lesbare JSON-Datei (`projects.json`) im App-Datenverzeichnis;
+      Laden ist asynchron, Nutzereingaben vor dem Laden gewinnen. Begründung in
+      REQUIREMENTS §4.4.1 und im [Plan](./plans/projektstruktur.md). 153 Tests grün,
+      `cargo check` sauber

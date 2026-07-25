@@ -7,6 +7,105 @@
        Dient dazu, den Netzwerk-Scan gegen echte Geräte zu prüfen. Die Texte sind hier
        noch hartcodiert und werden mit der i18n-Einführung ersetzt (REQUIREMENTS §4.6);
        die richtige Geräteliste-UI kommt in einem eigenen Schritt. -->
+  <!-- Projektverwaltung: Ein Projekt gibt der Liste Räume und Kategorien.
+       Ohne aktives Projekt verhält sich alles wie zuvor (flache Liste).
+       Siehe docs/plans/projektstruktur.md. -->
+  <section class="project-bar">
+    <label class="project-select">
+      Projekt:
+      <select
+        [value]="projects.activeProjectId() ?? ''"
+        (change)="selectProject($any($event.target).value)"
+      >
+        <option value="">— keins —</option>
+        @for (project of projects.projects(); track project.id) {
+          <option [value]="project.id">{{ project.name }}</option>
+        }
+      </select>
+    </label>
+
+    @if (projects.activeProject(); as project) {
+      <!-- Umbenennen beim Verlassen des Feldes; der Name ist kein Freitext pro Tastendruck. -->
+      <input
+        type="text"
+        class="project-input"
+        [value]="project.name"
+        (change)="projects.renameProject($any($event.target).value)"
+        aria-label="Projekt umbenennen"
+      />
+    }
+
+    <input
+      type="text"
+      class="project-input"
+      [value]="newProjectName()"
+      (input)="newProjectName.set($any($event.target).value)"
+      (keyup.enter)="createProject()"
+      placeholder="Neues Projekt"
+      aria-label="Name des neuen Projekts"
+    />
+    <button type="button" class="ghost" [disabled]="!newProjectName().trim()" (click)="createProject()">
+      Anlegen
+    </button>
+
+    @if (projects.activeProject(); as project) {
+      <button type="button" class="ghost danger" (click)="requestDelete(project.id)">
+        {{ pendingDelete() === project.id ? 'Wirklich löschen?' : 'Projekt löschen' }}
+      </button>
+    }
+  </section>
+
+  @if (projects.activeProject(); as project) {
+    <section class="project-labels">
+      <div class="label-group">
+        <span class="presets-label">Räume:</span>
+        @for (room of project.rooms; track room.id) {
+          <span class="chip">
+            {{ room.name }}
+            <button type="button" class="chip-remove" title="Raum entfernen" (click)="projects.removeRoom(room.id)">
+              ×
+            </button>
+          </span>
+        }
+        <input
+          type="text"
+          class="label-input"
+          [value]="newRoomName()"
+          (input)="newRoomName.set($any($event.target).value)"
+          (keyup.enter)="addRoom()"
+          placeholder="Raum hinzufügen"
+          aria-label="Neuer Raum"
+        />
+      </div>
+
+      <div class="label-group">
+        <span class="presets-label">Kategorien:</span>
+        @for (category of project.categories; track category.id) {
+          <span class="chip">
+            {{ category.name }}
+            <button
+              type="button"
+              class="chip-remove"
+              title="Kategorie entfernen"
+              (click)="projects.removeCategory(category.id)"
+            >
+              ×
+            </button>
+          </span>
+        }
+        <input
+          type="text"
+          class="label-input"
+          [value]="newCategoryName()"
+          (input)="newCategoryName.set($any($event.target).value)"
+          (keyup.enter)="addCategory()"
+          placeholder="Kategorie hinzufügen"
+          aria-label="Neue Kategorie"
+        />
+      </div>
+    </section>
+  }
+
   <section class="scan-controls">
     <input
       type="text"
@@ -61,18 +160,122 @@
     <p class="hint">Keine lokalen Netze gefunden — Bereich von Hand eintragen.</p>
   }
 
-  <ul class="device-list">
-    @for (device of devices(); track device.mac) {
-      <li class="device">
-        <span class="device-name">{{ device.name ?? device.ip }}</span>
-        <span class="device-meta">
-          {{ device.model }} · Gen {{ device.generation }} · {{ device.ip }}
-          @if (device.authEnabled) {
-            <span class="locked" title="Passwortgeschützt">🔒</span>
+  @if (projects.activeProject() && rows().length > 0) {
+    <section class="group-modes">
+      <span class="presets-label">Gruppieren nach:</span>
+      <button type="button" class="preset" [class.active]="groupMode() === 'room'" (click)="groupMode.set('room')">
+        Raum
+      </button>
+      <button
+        type="button"
+        class="preset"
+        [class.active]="groupMode() === 'category'"
+        (click)="groupMode.set('category')"
+      >
+        Kategorie
+      </button>
+      <button type="button" class="preset" [class.active]="groupMode() === 'none'" (click)="groupMode.set('none')">
+        gar nicht
+      </button>
+    </section>
+  }
+
+  <!-- Ein Eintrag pro Kanal: Ein Mehrkanalgerät steht mehrfach in der Liste
+       (REQUIREMENTS §4.2). Die Abschnitte kommen aus dem aktiven Projekt; ohne Projekt
+       gibt es genau eine Gruppe ohne Überschrift, also die flache Liste. -->
+  @for (group of groups(); track group.key) {
+    @if (group.title) {
+      <h2 class="group-title">{{ group.title }}</h2>
+    }
+
+    <ul class="device-list">
+      @for (row of group.items; track row.entityKey) {
+        <li class="device">
+          <span class="device-name">{{ row.label }}</span>
+          <span class="device-meta">
+            {{ row.device.model }} · Gen {{ row.device.generation }} · {{ row.device.ip }}
+            @if (row.channelLabel) {
+              · {{ row.channelLabel }}
+            }
+            @if (row.device.authEnabled) {
+              <span class="locked" title="Passwortgeschützt">🔒</span>
+            }
+          </span>
+
+          @if (row.channel; as channel) {
+            <div class="channel-controls">
+              <span class="channel-state" [class.on]="channel.on">{{ channel.on ? 'An' : 'Aus' }}</span>
+              <button type="button" [disabled]="row.state.busy" (click)="switchChannel(row, 'on')">
+                Ein
+              </button>
+              <button type="button" [disabled]="row.state.busy" (click)="switchChannel(row, 'off')">
+                Aus
+              </button>
+              <button type="button" [disabled]="row.state.busy" (click)="switchChannel(row, 'toggle')">
+                Umschalten
+              </button>
+            </div>
+          } @else if (row.state.busy) {
+            <span class="device-hint">Status wird abgefragt …</span>
+          } @else if (row.state.locked) {
+            <span class="device-hint">🔒 {{ row.state.error }}</span>
+          } @else if (row.state.error) {
+            <span class="device-hint error">
+              {{ row.state.error }}
+              <button type="button" class="retry" (click)="loadStatus(row.device)">
+                Erneut versuchen
+              </button>
+            </span>
+          } @else {
+            <!-- Typ-Info ist hier der Zweck: Sie sagt, welche Komponente noch fehlt. -->
+            <span class="device-hint">
+              Erkannt, nicht steuerbar@if (unsupportedInfo(row.state); as kinds) { ({{ kinds }}) }
+            </span>
           }
-        </span>
-      </li>
-    } @empty {
+
+          <!-- Zuordnung. Gespeichert wird beim Verlassen des Feldes, nicht bei jedem
+               Tastendruck – sonst schriebe jeder Buchstabe in den Speicher. -->
+          @if (projects.activeProject(); as project) {
+            <div class="assignment">
+              <input
+                type="text"
+                class="assignment-name"
+                [value]="row.assignment?.name ?? ''"
+                (change)="assign(row, { name: $any($event.target).value })"
+                placeholder="Eigener Name"
+                [attr.aria-label]="'Name für ' + row.label"
+              />
+              <select
+                class="assignment-select"
+                [value]="row.assignment?.categoryId ?? ''"
+                (change)="assign(row, { categoryId: $any($event.target).value || null })"
+                [attr.aria-label]="'Kategorie für ' + row.label"
+              >
+                <option value="">— Kategorie —</option>
+                @for (category of project.categories; track category.id) {
+                  <option [value]="category.id">{{ category.name }}</option>
+                }
+              </select>
+              <select
+                class="assignment-select"
+                [value]="row.assignment?.roomId ?? ''"
+                (change)="assign(row, { roomId: $any($event.target).value || null })"
+                [attr.aria-label]="'Raum für ' + row.label"
+              >
+                <option value="">— Raum —</option>
+                @for (room of project.rooms; track room.id) {
+                  <option [value]="room.id">{{ room.name }}</option>
+                }
+              </select>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  @if (rows().length === 0) {
+    <ul class="device-list">
       @if (!scanning() && scannedRange(); as range) {
         <li class="hint no-devices">
           <p>In {{ format(range) }} wurde kein Shelly gefunden. Häufige Ursachen:</p>
@@ -96,8 +299,8 @@
           </ul>
         </li>
       }
-    }
-  </ul>
+    </ul>
+  }
 </main>
 
 <footer class="app-footer">

@@ -1,0 +1,105 @@
+import { Injectable } from '@angular/core';
+import { fetch } from '@tauri-apps/plugin-http';
+import type { ShellyDevice } from './shelly.model';
+import {
+  parseDeviceStatus,
+  statusUrl,
+  switchUrl,
+  type DeviceStatus,
+  type SwitchAction,
+} from './status.model';
+
+/**
+ * Zeitlimit für Status und Schaltbefehle.
+ *
+ * Deutlich großzügiger als beim Sweep (300 bzw. 1000 ms): Dort geht es darum, 254 nicht
+ * belegte Adressen zügig abzuhaken, der Timeout bestimmt die Scan-Dauer. Hier ist das
+ * Gerät bekannt und antwortet – Geduld kostet nichts, ein Abbruch dagegen viel, weil bei
+ * einem Schaltbefehl offen bliebe, ob er angekommen ist.
+ */
+const DEVICE_TIMEOUT_MS = 5000;
+
+/**
+ * Fehler eines einzelnen Geräts.
+ *
+ * Wird pro Gerät angezeigt, nie global: Ein nicht erreichbares Gerät darf die Liste nicht
+ * unbrauchbar machen.
+ */
+export class DeviceError extends Error {
+  /**
+   * Gerät verlangt eine Anmeldung. Solange die Geräte-Auth nicht gebaut ist
+   * (REQUIREMENTS §4.3), sind Aktionen gesperrt – das ist etwas anderes als ein Fehler.
+   */
+  readonly locked: boolean;
+
+  constructor(message: string, locked = false) {
+    super(message);
+    this.name = 'DeviceError';
+    this.locked = locked;
+  }
+}
+
+/**
+ * Liest den Zustand von Shelly-Geräten und schaltet Relais.
+ *
+ * Der erste schreibende Zugriff der App – ausschließlich auf expliziten Nutzerklick
+ * (REQUIREMENTS §8). Eigener Service statt direkter Importe in der Komponente, damit die
+ * Tauri-Zugriffe im Test per DI ersetzbar sind (REQUIREMENTS §3.1).
+ */
+@Injectable({ providedIn: 'root' })
+export class ControlService {
+  /** Ist-Zustand eines Geräts. Wirft `DeviceError`, wenn die Abfrage nicht klappt. */
+  async getStatus(device: ShellyDevice): Promise<DeviceStatus> {
+    const response = await this.send(statusUrl(device));
+
+    let data: unknown;
+    try {
+      data = await response.json();
+    } catch {
+      throw new DeviceError('Antwort auf die Statusabfrage war kein JSON.');
+    }
+
+    const status = parseDeviceStatus(device.generation, data);
+    if (!status) {
+      throw new DeviceError('Unerwartete Antwort auf die Statusabfrage.');
+    }
+    return status;
+  }
+
+  /**
+   * Schaltet einen Relais-Kanal. Wirft `DeviceError`, wenn der Befehl nicht ankommt.
+   *
+   * Die Antwort wird verworfen: Sie meldet den *vorherigen* Zustand (`was_on`). Der neue
+   * gehört frisch abgefragt (REQUIREMENTS §4.2, kein optimistisches UI).
+   */
+  async setSwitch(device: ShellyDevice, channelId: number, action: SwitchAction): Promise<void> {
+    await this.send(switchUrl(device, channelId, action));
+  }
+
+  /** Eine Anfrage an ein bekanntes Gerät; übersetzt jeden Fehlschlag in `DeviceError`. */
+  private async send(url: string): Promise<Response> {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        // connectTimeout deckt nur den Verbindungsaufbau ab; das AbortSignal begrenzt
+        // zusätzlich die Gesamtdauer, falls das Gerät annimmt und dann nicht antwortet.
+        connectTimeout: DEVICE_TIMEOUT_MS,
+        signal: AbortSignal.timeout(DEVICE_TIMEOUT_MS),
+      });
+    } catch {
+      // Timeout, Gerät aus, kein Netz – für die Anzeige alles dasselbe.
+      throw new DeviceError('Gerät nicht erreichbar.');
+    }
+
+    if (response.status === 401) {
+      // Passwortschutz kann auch nach dem Scan eingeschaltet worden sein. Nicht als
+      // anonymen Fehler verschlucken, sondern als „gesperrt" kennzeichnen.
+      throw new DeviceError('Passwortgeschützt — Anmeldung ist noch nicht gebaut.', true);
+    }
+    if (!response.ok) {
+      throw new DeviceError(`Gerät antwortet mit HTTP ${response.status}.`);
+    }
+    return response;
+  }
+}
