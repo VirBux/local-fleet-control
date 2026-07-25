@@ -8,8 +8,9 @@
       `tauri build` läuft bereits
 - [ ] Android-Target konfigurieren (`tauri android init`), inkl. `networkSecurityConfig`
       für Cleartext-HTTP ins LAN (REQUIREMENTS §3.2) — bewusst nach dem Windows-MVP
-- [ ] GitHub-Repo anlegen und pushen (gh CLI ist auf dem System nicht installiert)
 - [ ] App-Icons ersetzen (aktuell noch die Tauri-Default-Icons in `src-tauri/icons/`)
+- [ ] Repo-Feinschliff auf GitHub: Topics (`home-assistant`, `shelly`, `tauri`, `smart-home`),
+      Issue-Templates, Beschreibung ggf. anpassen
 
 ## 2. Spike Netzwerk-Scan
 

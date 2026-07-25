@@ -37,3 +37,7 @@
 - [x] **Windows-Build verifiziert:** `npm run tauri build` erzeugt beide Installer
       (MSI 5,0 MB / NSIS-Setup 3,4 MB, Anwendung selbst 14,2 MB). Damit ist die
       Toolchain vollständig lauffähig.
+- [x] Sicherheitsprüfung vor der Veröffentlichung: keine Tokens, Keys, Zertifikate oder
+      `.env`-Dateien in Arbeitsstand und Historie. Gefunden und behoben: private E-Mail in
+      den Commit-Metadaten — Historie auf `info@ha-fleet-manager.com` umgeschrieben.
+- [x] **Repository veröffentlicht:** https://github.com/VirBux/local-fleet-control (public)
