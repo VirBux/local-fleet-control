@@ -37,6 +37,13 @@
 - [x] **Windows-Build verifiziert:** `npm run tauri build` erzeugt beide Installer
       (MSI 5,0 MB / NSIS-Setup 3,4 MB, Anwendung selbst 14,2 MB). Damit ist die
       Toolchain vollständig lauffähig.
+- [x] **Scan gegen echte Geräte verifiziert:** Gen2 und Gen3 werden im eigenen WLAN gefunden,
+      Generation und Modellkennung stimmen
+- [x] **Scan-Bereich frei wählbar** statt Interface-Auswahl (CIDR-Eingabe, lokale Netze nur
+      noch als Vorschläge, /32 gesperrt); Timeout/Parallelität je nach Strecke (LAN 300 ms/32,
+      über Route 1000 ms/16); Hinweis mit möglichen Ursachen, wenn nichts gefunden wird.
+      Begrenzung auf private Adressräume nach REQUIREMENTS §8. Siehe
+      [Plan](./plans/netzwerk-scan.md), 76 Tests grün
 - [x] Sicherheitsprüfung vor der Veröffentlichung: keine Tokens, Keys, Zertifikate oder
       `.env`-Dateien in Arbeitsstand und Historie. Gefunden und behoben: private E-Mail in
       den Commit-Metadaten — Historie auf `info@ha-fleet-manager.com` umgeschrieben.

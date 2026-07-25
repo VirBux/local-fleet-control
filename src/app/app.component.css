@@ -69,8 +69,11 @@
   cursor: default;
 }
 
-.scan-controls select {
-  padding: 0.45rem 0.5rem;
+.range-input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 16rem;
+  padding: 0.45rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -78,7 +81,44 @@
   font: inherit;
 }
 
-.network-info,
+.range-presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.presets-label {
+  color: var(--text-muted);
+}
+
+.preset {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.preset.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.preset-reason {
+  color: var(--text-muted);
+}
+
 .progress {
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -113,4 +153,25 @@
 .device-meta {
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+.no-devices {
+  font-size: 0.9rem;
+}
+
+.no-devices p {
+  margin: 0 0 0.4rem;
+}
+
+.no-devices ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.no-devices li {
+  margin-bottom: 0.35rem;
+}
+
+.no-devices code {
+  font-size: 0.85em;
 }

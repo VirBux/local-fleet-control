@@ -1,23 +1,53 @@
 import { Injectable } from '@angular/core';
 import { invoke } from '@tauri-apps/api/core';
 import { fetch } from '@tauri-apps/plugin-http';
-import { hostsInNetwork, parseShellyInfo, type LocalNetwork, type ShellyDevice } from './shelly.model';
+import { hostsInNetwork, parseShellyInfo, type LocalNetwork, type ScanRange, type ShellyDevice } from './shelly.model';
 
 /**
- * Zeit pro Host. Nicht belegte Adressen antworten gar nicht – dieser Wert bestimmt
- * also im Wesentlichen die Scan-Dauer.
+ * Zeit pro Host im eigenen Netz. Nicht belegte Adressen antworten gar nicht – dieser Wert
+ * bestimmt also im Wesentlichen die Scan-Dauer.
  */
-const PROBE_TIMEOUT_MS = 300;
+const LOCAL_TIMEOUT_MS = 300;
+
+/**
+ * Zeit pro Host über eine Route (VPN-Tunnel, Subnet-Router). Ein Round-Trip durch einen
+ * Tunnel dauert deutlich länger als im LAN; mit 300 ms fällt ein erreichbares Gerät
+ * schlicht ins Timeout und taucht nie auf.
+ */
+const ROUTED_TIMEOUT_MS = 1000;
 
 /**
  * Gleichzeitige Anfragen. Höhere Werte sind auf Android riskant (Limits bei
  * Dateideskriptoren und im WLAN-Stack). 254 Hosts / 32 × 300 ms ≈ 2,5 s im schlechtesten Fall.
  */
-const CONCURRENCY = 32;
+const LOCAL_CONCURRENCY = 32;
+
+/**
+ * Über einen Tunnel weniger parallel: Der Verkehr läuft durch einen einzigen
+ * Userspace-Prozess, viele gleichzeitige Verbindungen erhöhen dort vor allem die Verluste.
+ */
+const ROUTED_CONCURRENCY = 16;
 
 export interface ScanProgress {
   done: number;
   total: number;
+}
+
+/** Stellschrauben eines Scans – hängen davon ab, wie das Ziel erreicht wird. */
+export interface ScanSettings {
+  timeoutMs: number;
+  concurrency: number;
+}
+
+/**
+ * Vorgaben für einen Scan. `directlyAttached` kommt aus `isDirectlyAttached()`: Liegt das
+ * Ziel in einem Netz dieses Rechners, gelten die schnellen LAN-Werte, sonst die
+ * geduldigeren für den Weg über eine Route.
+ */
+export function scanSettingsFor(directlyAttached: boolean): ScanSettings {
+  return directlyAttached
+    ? { timeoutMs: LOCAL_TIMEOUT_MS, concurrency: LOCAL_CONCURRENCY }
+    : { timeoutMs: ROUTED_TIMEOUT_MS, concurrency: ROUTED_CONCURRENCY };
 }
 
 /** Findet Shelly-Geräte im lokalen Netz. Rein lesend (REQUIREMENTS §8). */
@@ -29,19 +59,23 @@ export class DiscoveryService {
   }
 
   /**
-   * Scannt ein Netz nach Shelly-Geräten.
+   * Scannt einen Adressbereich nach Shelly-Geräten.
    *
    * Gefundene Geräte werden über `onFound` sofort gemeldet, damit die UI sie anzeigen
    * kann, während der Scan noch läuft.
    */
-  async scanNetwork(
-    network: LocalNetwork,
-    callbacks: {
+  async scanRange(
+    range: ScanRange,
+    options: {
       onFound?: (device: ShellyDevice) => void;
       onProgress?: (progress: ScanProgress) => void;
+      settings?: ScanSettings;
     } = {},
   ): Promise<ShellyDevice[]> {
-    const hosts = hostsInNetwork(network.ip, network.prefixLen).filter((host) => host !== network.ip);
+    const { timeoutMs, concurrency } = options.settings ?? scanSettingsFor(true);
+    // Die eigene Adresse wird mitgefragt: Bei einem beliebigen Bereich ist sie nicht
+    // zwangsläufig bekannt, und eine Anfrage mehr fällt nicht ins Gewicht.
+    const hosts = hostsInNetwork(range.network, range.prefixLen);
     const total = hosts.length;
     const found: ShellyDevice[] = [];
 
@@ -54,33 +88,33 @@ export class DiscoveryService {
     const worker = async (): Promise<void> => {
       while (nextIndex < hosts.length) {
         const host = hosts[nextIndex++];
-        const device = await this.probe(host);
+        const device = await this.probe(host, timeoutMs);
         done++;
 
         if (device) {
           found.push(device);
-          callbacks.onFound?.(device);
+          options.onFound?.(device);
         }
-        callbacks.onProgress?.({ done, total });
+        options.onProgress?.({ done, total });
       }
     };
 
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, total) }, worker));
+    await Promise.all(Array.from({ length: Math.min(concurrency, total) }, worker));
 
     // Die Arbeiter sind unterschiedlich schnell – für eine stabile Anzeige sortieren.
     return found.sort((a, b) => compareIpv4(a.ip, b.ip));
   }
 
   /** Fragt eine einzelne Adresse ab. `null` = kein (erkennbares) Shelly. */
-  private async probe(ip: string): Promise<ShellyDevice | null> {
+  private async probe(ip: string, timeoutMs: number): Promise<ShellyDevice | null> {
     try {
       const response = await fetch(`http://${ip}/shelly`, {
         method: 'GET',
         // connectTimeout deckt nur den Verbindungsaufbau ab; das AbortSignal begrenzt
         // zusätzlich die Gesamtdauer, falls ein Gerät die Verbindung annimmt und dann
         // nicht antwortet.
-        connectTimeout: PROBE_TIMEOUT_MS,
-        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+        connectTimeout: timeoutMs,
+        signal: AbortSignal.timeout(timeoutMs),
       });
 
       if (!response.ok) {

@@ -13,6 +13,28 @@ export interface LocalNetwork {
   prefixLen: number;
 }
 
+/**
+ * Ein zu scannender Adressbereich.
+ *
+ * Bewusst getrennt von `LocalNetwork`: Welchen Weg eine Anfrage nimmt, entscheidet die
+ * Routing-Tabelle des Betriebssystems — die App bindet keine Sockets an ein Interface.
+ * Ein Bereich muss deshalb *nicht* zu einem Netz dieses Rechners gehören: Über einen
+ * VPN-Tunnel oder einen Tailscale-Subnet-Router sind fremde Netze erreichbar, ohne dass
+ * der Rechner selbst eine Adresse darin hat. Die lokalen Netze sind nur Vorschläge
+ * (REQUIREMENTS §4.5, „Scan-Bereich falls das Subnetz abweicht").
+ */
+export interface ScanRange {
+  /** Netzadresse in Normalform, z. B. "192.168.10.0". */
+  network: string;
+  prefixLen: number;
+}
+
+/**
+ * Obergrenze für einen Scan. Ein /16 hätte 65.534 Hosts und wäre bei kurzem Timeout
+ * nicht mehr sinnvoll scannbar.
+ */
+export const MAX_HOSTS = 1024;
+
 /** Ein per `GET /shelly` erkanntes Gerät. */
 export interface ShellyDevice {
   ip: string;
@@ -90,28 +112,149 @@ function asString(value: unknown): string | null {
  * Timeout nicht mehr sinnvoll scannbar. Für solche Netze ist der manuelle Scan-Bereich
  * aus REQUIREMENTS §4.5 vorgesehen. Zu große oder ungültige Netze liefern eine leere Liste.
  */
-export function hostsInNetwork(ip: string, prefixLen: number, maxHosts = 1024): string[] {
+export function hostsInNetwork(ip: string, prefixLen: number, maxHosts = MAX_HOSTS): string[] {
   const address = ipv4ToInt(ip);
-  if (address === null || !Number.isInteger(prefixLen) || prefixLen < 0 || prefixLen > 32) {
+  const hostCount = hostCountForPrefix(prefixLen);
+  if (address === null || hostCount <= 0 || hostCount > maxHosts) {
     return [];
   }
 
-  const hostBits = 32 - prefixLen;
-  // /31 und /32 haben keine regulären Host-Adressen.
-  const hostCount = hostBits >= 2 ? 2 ** hostBits - 2 : 0;
-  if (hostCount <= 0 || hostCount > maxHosts) {
-    return [];
-  }
-
-  // Host-Bits ausmaskieren ergibt die Netzadresse. `>>> 0` erzwingt eine vorzeichenlose
-  // Zahl – JavaScripts Bit-Operatoren rechnen sonst mit vorzeichenbehafteten 32 Bit.
-  const networkAddress = (address & (0xffffffff << hostBits)) >>> 0;
+  const networkAddress = maskNetwork(address, prefixLen);
 
   const hosts: string[] = [];
   for (let offset = 1; offset <= hostCount; offset++) {
     hosts.push(intToIpv4((networkAddress + offset) >>> 0));
   }
   return hosts;
+}
+
+/**
+ * Anzahl regulär nutzbarer Host-Adressen eines Präfixes, ohne Netz- und Broadcast-Adresse.
+ *
+ * /31 und /32 haben keine — ein /32 (typisch für Tailscale- und WireGuard-Adressen)
+ * beschreibt genau einen Rechner und ist deshalb nicht scannbar. Ungültige Präfixe
+ * liefern 0.
+ */
+export function hostCountForPrefix(prefixLen: number): number {
+  if (!Number.isInteger(prefixLen) || prefixLen < 0 || prefixLen > 32) {
+    return 0;
+  }
+  const hostBits = 32 - prefixLen;
+  return hostBits >= 2 ? 2 ** hostBits - 2 : 0;
+}
+
+/**
+ * Liest einen Scan-Bereich aus einer Eingabe wie "192.168.10.0/24".
+ *
+ * Erlaubt ist jede Adresse des Netzes ("192.168.10.37/24") — zurück kommt immer die
+ * Netzadresse. Ohne Präfix wird /24 angenommen: die Scan-Einheit aus REQUIREMENTS §4.1
+ * und der Normalfall im Heimnetz. `null` bedeutet „keine gültige Eingabe"; ob der
+ * Bereich auch sinnvoll scannbar ist, beantwortet `hostCountForPrefix`.
+ */
+export function parseScanRange(input: string): ScanRange | null {
+  const [addressPart, prefixPart, ...rest] = input.trim().split('/');
+  if (rest.length > 0) {
+    return null;
+  }
+
+  const address = ipv4ToInt(addressPart);
+  if (address === null) {
+    return null;
+  }
+
+  let prefixLen = 24;
+  if (prefixPart !== undefined) {
+    // Schützt vor "24.5", " 24" und Leerstring, was Number() akzeptieren würde.
+    if (!/^\d{1,2}$/.test(prefixPart)) {
+      return null;
+    }
+    prefixLen = Number(prefixPart);
+    if (prefixLen > 32) {
+      return null;
+    }
+  }
+
+  return { network: intToIpv4(maskNetwork(address, prefixLen)), prefixLen };
+}
+
+/** Schreibweise für Anzeige und Eingabefeld: "192.168.10.0/24". */
+export function formatScanRange(range: ScanRange): string {
+  return `${range.network}/${range.prefixLen}`;
+}
+
+/** Das Netz eines lokalen Interfaces als Scan-Bereich (Vorschlag in der UI). */
+export function toScanRange(network: LocalNetwork): ScanRange {
+  const address = ipv4ToInt(network.ip);
+  return {
+    network: address === null ? network.ip : intToIpv4(maskNetwork(address, network.prefixLen)),
+    prefixLen: network.prefixLen,
+  };
+}
+
+/**
+ * Hängt dieser Rechner selbst an dem Netz, das der Bereich beschreibt?
+ *
+ * Nur dann ist mit LAN-Latenz zu rechnen. Alles andere läuft über eine Route — VPN-Tunnel,
+ * Subnet-Router — und braucht spürbar länger pro Anfrage, siehe `scanSettingsFor`.
+ */
+export function isDirectlyAttached(range: ScanRange, networks: LocalNetwork[]): boolean {
+  const target = ipv4ToInt(range.network);
+  if (target === null) {
+    return false;
+  }
+
+  return networks.some((network) => {
+    const local = ipv4ToInt(network.ip);
+    // Der Zielbereich muss vollständig im lokalen Netz liegen, nicht nur überlappen.
+    return (
+      local !== null &&
+      range.prefixLen >= network.prefixLen &&
+      maskNetwork(target, network.prefixLen) === maskNetwork(local, network.prefixLen)
+    );
+  });
+}
+
+/**
+ * Private Adressräume, in denen Smart-Home-Geräte leben: RFC 1918 plus 100.64/10
+ * (Carrier-Grade NAT – der Adressraum, den Tailscale vergibt).
+ */
+const PRIVATE_BLOCKS: ReadonlyArray<readonly [string, number]> = [
+  ['10.0.0.0', 8],
+  ['172.16.0.0', 12],
+  ['192.168.0.0', 16],
+  ['100.64.0.0', 10],
+];
+
+/**
+ * Liegt der Bereich vollständig in einem privaten Adressraum?
+ *
+ * REQUIREMENTS §8: Die App spricht keine Fremd-Endpunkte an. Seit der Scan-Bereich frei
+ * wählbar ist, hält diese Prüfung die Zusage — öffentliche Adressen lassen sich nicht
+ * scannen, die App wird also nicht versehentlich zum Portscanner fürs Internet.
+ */
+export function isPrivateRange(range: ScanRange): boolean {
+  const target = ipv4ToInt(range.network);
+  if (target === null) {
+    return false;
+  }
+
+  return PRIVATE_BLOCKS.some(([base, prefixLen]) => {
+    const blockBase = ipv4ToInt(base);
+    return (
+      blockBase !== null && range.prefixLen >= prefixLen && maskNetwork(target, prefixLen) === blockBase
+    );
+  });
+}
+
+/**
+ * Netzadresse: die Host-Bits ausmaskieren. `>>> 0` erzwingt eine vorzeichenlose Zahl —
+ * JavaScripts Bit-Operatoren rechnen sonst mit vorzeichenbehafteten 32 Bit.
+ */
+function maskNetwork(address: number, prefixLen: number): number {
+  const hostBits = 32 - prefixLen;
+  // Ein Shift um 32 ist in JavaScript ein Shift um 0 – /0 deshalb gesondert behandeln.
+  const mask = hostBits >= 32 ? 0 : (0xffffffff << hostBits) >>> 0;
+  return (address & mask) >>> 0;
 }
 
 function ipv4ToInt(ip: string): number | null {

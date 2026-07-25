@@ -8,21 +8,19 @@
        noch hartcodiert und werden mit der i18n-Einführung ersetzt (REQUIREMENTS §4.6);
        die richtige Geräteliste-UI kommt in einem eigenen Schritt. -->
   <section class="scan-controls">
-    @if (networks().length > 1) {
-      <select
-        [disabled]="scanning()"
-        (change)="selectNetwork($any($event.target).value)"
-        aria-label="Netzwerk"
-      >
-        @for (network of networks(); track network.ip; let i = $index) {
-          <option [value]="i">{{ network.interface }} — {{ network.ip }}/{{ network.prefixLen }}</option>
-        }
-      </select>
-    } @else if (selectedNetwork(); as network) {
-      <span class="network-info">{{ network.interface }} — {{ network.ip }}/{{ network.prefixLen }}</span>
-    }
+    <input
+      type="text"
+      class="range-input"
+      [value]="rangeInput()"
+      (input)="rangeInput.set($any($event.target).value)"
+      [disabled]="scanning()"
+      placeholder="192.168.1.0/24"
+      spellcheck="false"
+      autocapitalize="off"
+      aria-label="Scan-Bereich"
+    />
 
-    <button type="button" [disabled]="scanning() || !selectedNetwork()" (click)="scan()">
+    <button type="button" [disabled]="!canScan()" (click)="scan()">
       {{ scanning() ? 'Suche läuft …' : 'Geräte suchen' }}
     </button>
 
@@ -31,12 +29,36 @@
     }
   </section>
 
+  <!-- Nur Vorschläge: Der Scan folgt der Routing-Tabelle des Systems, nicht einem
+       Interface. Fremde Netze hinter VPN/Subnet-Router werden von Hand eingetragen. -->
+  @if (presets().length > 0) {
+    <section class="range-presets">
+      <span class="presets-label">Eigene Netze:</span>
+      @for (preset of presets(); track preset.cidr) {
+        <button
+          type="button"
+          class="preset"
+          [class.active]="preset.cidr === rangeInput().trim()"
+          [disabled]="scanning() || preset.disabledReason !== null"
+          [title]="preset.disabledReason ? 'Nicht scannbar: ' + preset.disabledReason : preset.cidr"
+          (click)="usePreset(preset)"
+        >
+          {{ preset.label }}@if (preset.disabledReason) { <span class="preset-reason">({{ preset.disabledReason }})</span> }
+        </button>
+      }
+    </section>
+  }
+
   @if (error()) {
     <p class="error">{{ error() }}</p>
   }
 
+  @if (rangeError() && !scanning()) {
+    <p class="hint">{{ rangeError() }}</p>
+  }
+
   @if (networks().length === 0 && !error()) {
-    <p class="hint">Kein nutzbares Netzwerk gefunden.</p>
+    <p class="hint">Keine lokalen Netze gefunden — Bereich von Hand eintragen.</p>
   }
 
   <ul class="device-list">
@@ -51,8 +73,28 @@
         </span>
       </li>
     } @empty {
-      @if (!scanning() && progress()) {
-        <li class="hint">Keine Geräte gefunden.</li>
+      @if (!scanning() && scannedRange(); as range) {
+        <li class="hint no-devices">
+          <p>In {{ format(range) }} wurde kein Shelly gefunden. Häufige Ursachen:</p>
+          <ul>
+            <li>
+              <strong>Falscher Bereich.</strong> Die Geräte hängen oft in einem anderen Subnetz als
+              dieser Rechner — den Bereich direkt eintragen, z. B. <code>192.168.10.0/24</code>.
+              Das Tunnelnetz eines VPN (z. B. <code>172.27.66.0/24</code>) zu scannen bringt nichts:
+              Dort wohnt nur die Gegenstelle, nicht die Geräte dahinter.
+            </li>
+            <li>
+              <strong>VPN leitet allen Verkehr in den Tunnel.</strong> Bei
+              <code>AllowedIPs = 0.0.0.0/0</code> blockiert der WireGuard-Client zusätzlich
+              „Block untunneled traffic" — dann ist auch das eigene LAN nicht mehr erreichbar.
+              In der VPN-Konfiguration einschränken.
+            </li>
+            <li>
+              <strong>Geräte antworten langsamer als das Zeitlimit.</strong> Über einen Tunnel
+              kann das passieren — Scan wiederholen.
+            </li>
+          </ul>
+        </li>
       }
     }
   </ul>

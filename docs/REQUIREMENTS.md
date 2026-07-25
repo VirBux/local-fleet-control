@@ -83,9 +83,18 @@ die robustere Grenze zwischen Angular und der Tauri-Brücke.
 
 ### 4.1 Geräte-Discovery
 
-- **Subnetz-Sweep** des lokalen /24-Netzes: `GET http://<ip>/shelly` auf alle Adressen, kurzer
+- **Subnetz-Sweep** eines /24-Netzes: `GET http://<ip>/shelly` auf alle Adressen, kurzer
   Timeout (~300 ms), parallelisiert. Der Endpunkt antwortet bei allen Shelly-Generationen
   **ohne Auth** und identifiziert das Gerät.
+- **Der Scan-Bereich ist frei wählbar** (CIDR), die lokalen Netze des Rechners sind nur
+  Vorschläge. Grund: Welchen Weg eine Anfrage nimmt, entscheidet die Routing-Tabelle des
+  Betriebssystems — die App bindet keine Sockets an ein Interface. Damit sind auch Netze
+  erreichbar, in denen der Rechner selbst keine Adresse hat (VPN, Tailscale-Subnet-Router).
+  Grenzen: höchstens 1024 Adressen pro Scan und **nur private Adressräume** (RFC 1918 sowie
+  100.64/10 für CGNAT/Tailscale) — siehe §8.
+- Timeout und Parallelität hängen von der Strecke ab: im eigenen Netz 300 ms / 32 parallel,
+  über eine Route (VPN-Tunnel, Subnet-Router) 1000 ms / 16 parallel, weil ein Round-Trip
+  durch einen Tunnel deutlich länger dauert.
 - Generationserkennung über die Antwort: Gen1 liefert `type`, Gen2/3 liefert `gen` + `model`;
   Feld `auth`/`auth_en` zeigt Passwortschutz an.
 - **Kein mDNS im MVP** (spart iOS-Multicast-Entitlement und Sonderfälle; Phase 2).
@@ -175,9 +184,12 @@ die robustere Grenze zwischen Angular und der Tauri-Brücke.
 ## 8. Sicherheit & Privacy
 
 - Keine Telemetrie, keine Cloud-Aufrufe außer dem Update-Check (abschaltbar wäre nice-to-have).
-- Netzwerk-Scan nur im lokalen Subnetz, rein lesend.
+- Netzwerk-Scan nur in **privaten Adressräumen**, rein lesend. Der Bereich ist frei wählbar
+  (§4.1), aber auf 10/8, 172.16/12, 192.168/16 und 100.64/10 begrenzt — öffentliche Adressen
+  lassen sich nicht scannen, damit die App nicht als Portscanner fürs Internet taugt.
 - Credentials niemals loggen; sichere Ablage siehe 4.4.
-- Keine Fremd-Endpunkte: Die App spricht ausschließlich Geräte-IPs im LAN und api.github.com an.
+- Keine Fremd-Endpunkte: Die App spricht ausschließlich Geräte-IPs in privaten Netzen und
+  api.github.com an.
 
 ## 9. Offene Entscheidungen (im Projekt klären und hier nachtragen)
 

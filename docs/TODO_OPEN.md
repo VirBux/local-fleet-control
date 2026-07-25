@@ -12,14 +12,16 @@
 - [ ] Repo-Feinschliff auf GitHub: Topics (`home-assistant`, `shelly`, `tauri`, `smart-home`),
       Issue-Templates, Beschreibung ggf. anpassen
 
-## 2. Spike Netzwerk-Scan
+## 2. Netzwerk-Scan
 
-Plan: [docs/plans/netzwerk-scan.md](./plans/netzwerk-scan.md). Code steht, die Auswertungslogik
-ist per `npm run check:model` geprüft — **die Verifikation am echten Gerät fehlt noch**, weil
-ohne Build Tools nichts kompiliert.
+Plan: [docs/plans/netzwerk-scan.md](./plans/netzwerk-scan.md). Der Scan findet Geräte im
+eigenen Netz (am echten Aufbau bestätigt: Gen2 und Gen3). Die Auswertungslogik ist per
+`npm test` geprüft.
 
-- [ ] Gegen ein echtes Shelly testen: wird es gefunden, stimmt die Generation?
-- [ ] Scan-Dauer im echten Netz messen; Timeout (300 ms) und Parallelität (32) nachjustieren
+- [ ] **Fremdnetz über VPN gegentesten** — `192.168.10.0/24` von Hand eintragen und prüfen,
+      ob die 1000 ms Timeout über den Tailscale-Subnet-Router reichen
+- [ ] Scan-Dauer im echten Netz messen; Timeout und Parallelität nachjustieren
+      (LAN 300 ms/32, Route 1000 ms/16 — beide Werte sind geschätzt)
 
 ## 3. Geräteliste-UI
 

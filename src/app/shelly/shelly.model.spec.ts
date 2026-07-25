@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { hostsInNetwork, parseShellyInfo } from './shelly.model';
+import {
+  hostCountForPrefix,
+  hostsInNetwork,
+  isDirectlyAttached,
+  isPrivateRange,
+  parseScanRange,
+  parseShellyInfo,
+  toScanRange,
+  type LocalNetwork,
+} from './shelly.model';
+
+/** Kurzschreibweise für die Testfälle rund um lokale Netze. */
+function netz(ip: string, prefixLen: number): LocalNetwork {
+  return { interface: 'test', ip, netmask: '', prefixLen };
+}
 
 describe('parseShellyInfo', () => {
   it('erkennt ein Gen1-Gerät (Shelly 2.5)', () => {
@@ -140,5 +154,136 @@ describe('hostsInNetwork', () => {
     it.each(ungueltig)('%s', (_name, ip, prefixLen) => {
       expect(hostsInNetwork(ip, prefixLen)).toHaveLength(0);
     });
+  });
+});
+
+describe('hostCountForPrefix', () => {
+  it('zählt die Host-Adressen ohne Netz- und Broadcast-Adresse', () => {
+    expect(hostCountForPrefix(24)).toBe(254);
+    expect(hostCountForPrefix(23)).toBe(510);
+    expect(hostCountForPrefix(26)).toBe(62);
+    expect(hostCountForPrefix(16)).toBe(65534);
+  });
+
+  it('liefert 0, wo es keine Geräteadressen gibt', () => {
+    // /32 ist der Normalfall bei Tailscale- und WireGuard-Adressen.
+    expect(hostCountForPrefix(32)).toBe(0);
+    expect(hostCountForPrefix(31)).toBe(0);
+  });
+
+  it('liefert 0 für ungültige Präfixe', () => {
+    expect(hostCountForPrefix(-1)).toBe(0);
+    expect(hostCountForPrefix(33)).toBe(0);
+    expect(hostCountForPrefix(24.5)).toBe(0);
+  });
+});
+
+describe('parseScanRange', () => {
+  it('liest Adresse und Präfix', () => {
+    expect(parseScanRange('192.168.10.0/24')).toEqual({ network: '192.168.10.0', prefixLen: 24 });
+  });
+
+  it('rechnet eine beliebige Adresse des Netzes auf die Netzadresse herunter', () => {
+    expect(parseScanRange('192.168.1.39/24')).toEqual({ network: '192.168.1.0', prefixLen: 24 });
+    expect(parseScanRange('10.0.0.70/26')).toEqual({ network: '10.0.0.64', prefixLen: 26 });
+  });
+
+  it('nimmt ohne Präfix /24 an', () => {
+    expect(parseScanRange('192.168.10.5')).toEqual({ network: '192.168.10.0', prefixLen: 24 });
+  });
+
+  it('ignoriert umgebende Leerzeichen', () => {
+    expect(parseScanRange('  192.168.10.0/24  ')).toEqual({ network: '192.168.10.0', prefixLen: 24 });
+  });
+
+  it('akzeptiert auch Präfixe ohne Host-Adressen – die Bewertung passiert getrennt', () => {
+    expect(parseScanRange('100.70.91.49/32')).toEqual({ network: '100.70.91.49', prefixLen: 32 });
+  });
+
+  describe('weist ungültige Eingaben ab', () => {
+    const ungueltig = [
+      ['leer', ''],
+      ['nur Leerzeichen', '   '],
+      ['kein Präfix hinter dem Schrägstrich', '192.168.1.0/'],
+      ['Präfix über 32', '192.168.1.0/33'],
+      ['nicht ganzzahliger Präfix', '192.168.1.0/24.5'],
+      ['zwei Schrägstriche', '192.168.1.0/24/24'],
+      ['zu wenige Oktette', '192.168.1/24'],
+      ['Oktett über 255', '192.168.1.300/24'],
+      ['IPv6', 'fe80::1/64'],
+      ['Hostname', 'shelly.local/24'],
+    ] as const;
+
+    it.each(ungueltig)('%s', (_name, input) => {
+      expect(parseScanRange(input)).toBeNull();
+    });
+  });
+});
+
+describe('toScanRange', () => {
+  it('macht aus der Interface-Adresse den Netzbereich', () => {
+    expect(toScanRange(netz('192.168.1.39', 24))).toEqual({ network: '192.168.1.0', prefixLen: 24 });
+  });
+
+  it('lässt ein /32 unverändert', () => {
+    expect(toScanRange(netz('100.70.91.49', 32))).toEqual({ network: '100.70.91.49', prefixLen: 32 });
+  });
+});
+
+describe('isDirectlyAttached', () => {
+  const netze = [netz('192.168.1.39', 24), netz('172.27.66.2', 24)];
+
+  it('erkennt das eigene Netz', () => {
+    expect(isDirectlyAttached({ network: '192.168.1.0', prefixLen: 24 }, netze)).toBe(true);
+    expect(isDirectlyAttached({ network: '172.27.66.0', prefixLen: 24 }, netze)).toBe(true);
+  });
+
+  it('erkennt einen Teilbereich des eigenen Netzes', () => {
+    expect(isDirectlyAttached({ network: '192.168.1.64', prefixLen: 26 }, netze)).toBe(true);
+  });
+
+  it('meldet fremde Netze als nicht direkt angebunden', () => {
+    // Über einen Subnet-Router erreichbar – aber eben nicht mit LAN-Latenz.
+    expect(isDirectlyAttached({ network: '192.168.10.0', prefixLen: 24 }, netze)).toBe(false);
+  });
+
+  it('meldet einen Bereich, der das eigene Netz nur enthält, als nicht direkt angebunden', () => {
+    // Ein /16 um das eigene /24 herum enthält überwiegend fremde Adressen.
+    expect(isDirectlyAttached({ network: '192.168.0.0', prefixLen: 16 }, netze)).toBe(false);
+  });
+
+  it('kommt ohne lokale Netze klar', () => {
+    expect(isDirectlyAttached({ network: '192.168.1.0', prefixLen: 24 }, [])).toBe(false);
+  });
+});
+
+describe('isPrivateRange', () => {
+  const privat: [string, string][] = [
+    ['RFC 1918 – 192.168', '192.168.10.0/24'],
+    ['RFC 1918 – 10/8', '10.13.37.0/24'],
+    ['RFC 1918 – 172.16/12 (untere Grenze)', '172.16.0.0/24'],
+    ['RFC 1918 – 172.16/12 (obere Grenze)', '172.31.255.0/24'],
+    ['CGNAT/Tailscale – 100.64/10', '100.70.91.0/24'],
+  ];
+
+  it.each(privat)('%s', (_name, cidr) => {
+    expect(isPrivateRange(parseScanRange(cidr)!)).toBe(true);
+  });
+
+  const oeffentlich: [string, string][] = [
+    ['öffentliches /24', '8.8.8.0/24'],
+    ['knapp unter 172.16/12', '172.15.255.0/24'],
+    ['knapp über 172.16/12', '172.32.0.0/24'],
+    ['knapp über 100.64/10', '100.128.0.0/24'],
+    ['192.169 statt 192.168', '192.169.1.0/24'],
+  ];
+
+  it.each(oeffentlich)('%s', (_name, cidr) => {
+    expect(isPrivateRange(parseScanRange(cidr)!)).toBe(false);
+  });
+
+  it('lehnt einen Bereich ab, der über den privaten Block hinausreicht', () => {
+    // 192.168.0.0/15 enthält auch 192.169.x – nicht mehr vollständig privat.
+    expect(isPrivateRange({ network: '192.168.0.0', prefixLen: 15 })).toBe(false);
   });
 });

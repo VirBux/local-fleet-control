@@ -20,7 +20,8 @@ weder Home Assistant noch Internet: nur dich und die Geräte im selben WLAN.
 
 ## Was es tut
 
-- **Findet Geräte im lokalen Netz** per Subnetz-Scan (kein Konfigurationsaufwand).
+- **Findet Geräte im lokalen Netz** per Subnetz-Scan (kein Konfigurationsaufwand). Der
+  Scan-Bereich lässt sich frei angeben — auch Netze, die nur über VPN erreichbar sind.
 - **Zeigt eine schlichte Geräteliste** mit Status und Schaltflächen — mehr nicht.
 - **Schaltet** Relais/Steckdosen, Licht und Dimmer, Rollläden.
 - **Funktioniert offline.** Kein Konto, kein Backend, keine Telemetrie.
@@ -58,8 +59,9 @@ installiert werden („Installation aus unbekannten Quellen").
 
 Die App sendet **keine Telemetrie**. Der einzige Internet-Zugriff ist ein Versions-Check gegen
 `api.github.com` beim Start, der auf ein verfügbares Update hinweist. Es gibt kein Auto-Update.
-Alles Übrige — Scan und Schaltbefehle — bleibt im lokalen Netz. Der Netzwerk-Scan ist rein lesend;
-geschaltet wird nur auf ausdrücklichen Klick.
+Alles Übrige — Scan und Schaltbefehle — bleibt im privaten Netz: Scannbar sind ausschließlich
+private Adressbereiche (10.x, 172.16–31.x, 192.168.x, 100.64–127.x), öffentliche Adressen lehnt
+die App ab. Der Netzwerk-Scan ist rein lesend; geschaltet wird nur auf ausdrücklichen Klick.
 
 Geräte-Zugangsdaten werden ausschließlich lokal auf deinem Gerät gespeichert.
 
