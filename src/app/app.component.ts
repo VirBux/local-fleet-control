@@ -1,6 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { getVersion } from '@tauri-apps/api/app';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { PlatformService } from './core/platform.service';
 import { DiscoveryService, type ScanProgress } from './shelly/discovery.service';
 import type { LocalNetwork, ShellyDevice } from './shelly/shelly.model';
 
@@ -12,6 +11,7 @@ import type { LocalNetwork, ShellyDevice } from './shelly/shelly.model';
 })
 export class AppComponent {
   private readonly discovery = inject(DiscoveryService);
+  private readonly platform = inject(PlatformService);
 
   /** Version aus tauri.conf.json – im Browser (ng serve) nicht verfügbar. */
   readonly version = signal('');
@@ -24,10 +24,7 @@ export class AppComponent {
   readonly error = signal('');
 
   constructor() {
-    getVersion()
-      .then((v) => this.version.set(v))
-      .catch(() => this.version.set(''));
-
+    void this.platform.getAppVersion().then((v) => this.version.set(v));
     void this.loadNetworks();
   }
 
@@ -73,6 +70,6 @@ export class AppComponent {
   /** Externe Links im System-Browser öffnen, nicht im App-Fenster. */
   openHomepage(event: Event): void {
     event.preventDefault();
-    void openUrl('https://ha-fleet-manager.com');
+    void this.platform.openExternal('https://ha-fleet-manager.com');
   }
 }

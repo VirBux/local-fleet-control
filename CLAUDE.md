@@ -21,6 +21,10 @@ Bei Widersprüchen gilt REQUIREMENTS.md.
   (DE/EN/ES/FR/HR), keine hartcodierten Strings.
 - **Tech-Stack ist festgelegt** (Tauri 2 + Angular, eine Codebasis) — keine alternativen
   Frameworks vorschlagen, ohne explizit zu fragen. Rust-Anteil minimal halten.
+- **Zoneless:** Zustand, der die Ansicht beeinflusst, gehört in Signals — ohne Zone.js löst
+  sonst nichts ein Rendering aus.
+- **Tests:** `npm test` (Vitest). `vi.mock()` auf Modulpfade funktioniert hier **nicht** —
+  native Zugriffe hinter injizierbare Services legen und per DI ersetzen (REQUIREMENTS §3.1).
 - **Kleine, nachvollziehbare Schritte** bevorzugen. Jede Änderung kurz begründen.
 - **Erst lauffähige Basis, dann Erweiterung.**
 - **Nicht ungefragt refaktorieren** oder Abstraktionen einführen, die der Task nicht braucht.

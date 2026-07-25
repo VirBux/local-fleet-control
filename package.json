@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "check:model": "node tools/check-shelly-model.mts",
+    "test": "ng test",
     "tauri": "tauri"
   },
   "private": true,
@@ -21,14 +21,15 @@
     "@tauri-apps/plugin-http": "^2.5.9",
     "@tauri-apps/plugin-opener": "^2",
     "rxjs": "~7.8.2",
-    "tslib": "^2.8.1",
-    "zone.js": "~0.15.1"
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@angular/build": "^20.1.4",
     "@angular/cli": "^20.1.4",
     "@angular/compiler-cli": "^20.1.4",
     "@tauri-apps/cli": "^2",
-    "typescript": "~5.8.3"
+    "jsdom": "^29.1.1",
+    "typescript": "~5.8.3",
+    "vitest": "^3.2.7"
   }
 }

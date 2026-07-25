@@ -38,6 +38,9 @@ lokalen Netzwerk.
 - **Framework:** Tauri 2 (Desktop + Mobile aus einem Projekt)
 - **Frontend:** Angular (aktuelle stabile Major-Version), TypeScript, Standalone Components,
   Signals
+- **Change Detection: zoneless** (`provideZonelessChangeDetection()`, seit Angular 20 stabil).
+  Zone.js ist entfernt. Konsequenz für die Entwicklung: **Zustand, der die Ansicht beeinflusst,
+  gehört in Signals** — Werte in gewöhnlichen Feldern lösen kein Rendering aus.
 - **Nativer Kern:** Rust nur wo zwingend nötig (voraussichtlich: Ermittlung der lokalen
   IP/Subnetzmaske für den Scan). Alle Geräte-HTTP-Aufrufe laufen über das
   **Tauri-HTTP-Plugin** (`@tauri-apps/plugin-http`) aus TypeScript — das umgeht CORS, ein eigener
@@ -47,7 +50,27 @@ lokalen Netzwerk.
 - **Build-Targets MVP:** Windows (.msi/.exe), Android (.apk). **iOS ist Phase 2** (erfordert
   Apple-Developer-Account, 99 $/Jahr — bewusst verschoben, keine Kosten im MVP).
 
-### 3.1 Plattform-Besonderheiten (früh einplanen)
+### 3.1 Tests
+
+**Vitest über den offiziellen Angular-Builder `@angular/build:unit-test`** (`npm test`).
+
+Begründung: Karma ist von Angular abgekündigt und damit für ein langlebiges Projekt keine
+Option. Der `unit-test`-Builder ist der Weg, den das Angular-Team eingeschlagen hat; die
+Konfiguration liegt in `angular.json` und wird von `ng update` mitgeführt, statt in einer
+separaten Framework-Konfiguration zu verrotten. Gegenüber Vitest-direkt (z. B. via AnalogJS)
+spart das eine Drittanbieter-Abhängigkeit im Testpfad.
+
+Der Builder ist derzeit als **EXPERIMENTAL** markiert und gibt bei jedem Lauf einen
+entsprechenden Hinweis aus. Betroffen sind die Builder-Optionen, nicht die Testdateien selbst —
+die Migrationskosten bei einer Änderung bleiben gering.
+
+**Wichtige Einschränkung (nachgemessen):** `vi.mock()` auf Modulpfade **greift nicht**, weil der
+Builder die Spec-Dateien vorab mit esbuild bündelt und Vitests Modul-Interception damit ins
+Leere läuft. Native Zugriffe (Tauri-APIs) gehören deshalb hinter injizierbare Services — siehe
+`PlatformService` und `DiscoveryService` —, die im Test per DI ersetzt werden. Das ist ohnehin
+die robustere Grenze zwischen Angular und der Tauri-Brücke.
+
+### 3.2 Plattform-Besonderheiten (früh einplanen)
 
 - **Android:** Shellys sprechen HTTP (kein TLS). Cleartext-Traffic ins LAN muss per
   `networkSecurityConfig` explizit erlaubt werden, sonst schlagen alle Requests fehl.

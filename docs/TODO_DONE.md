@@ -24,3 +24,11 @@
 - [x] Sweep-Service (`src/app/shelly/discovery.service.ts`): 32 parallele Anfragen,
       300 ms Timeout, Treffer werden während des Scans gemeldet
 - [x] Provisorische Spike-Oberfläche zum Testen des Scans am echten Gerät
+- [x] **Entscheidung Test-Setup: Vitest über `@angular/build:unit-test`** (`npm test`) —
+      Begründung und die Einschränkung bei `vi.mock` in REQUIREMENTS §3.1
+- [x] **Entscheidung Zoneless:** `provideZonelessChangeDetection()`, Zone.js entfernt
+      (Bundle 242 kB → 207 kB)
+- [x] `PlatformService` eingeführt: kapselt Tauri-Zugriffe, damit sie im Test per DI
+      ersetzbar sind
+- [x] 31 Tests grün (25 Discovery-Logik, 6 Komponente inkl. Nachweis, dass Signal-Änderungen
+      ohne Zone.js im DOM ankommen)

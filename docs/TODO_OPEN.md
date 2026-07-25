@@ -9,7 +9,7 @@
 - [ ] Windows-Build verifizieren (`npm run tauri dev` + `npm run tauri build`) — erst nach
       Build-Tools möglich
 - [ ] Android-Target konfigurieren (`tauri android init`), inkl. `networkSecurityConfig`
-      für Cleartext-HTTP ins LAN (REQUIREMENTS §3.1) — bewusst nach dem Windows-MVP
+      für Cleartext-HTTP ins LAN (REQUIREMENTS §3.2) — bewusst nach dem Windows-MVP
 - [ ] GitHub-Repo anlegen und pushen (gh CLI ist auf dem System nicht installiert)
 - [ ] App-Icons ersetzen (aktuell noch die Tauri-Default-Icons in `src-tauri/icons/`)
 
@@ -49,9 +49,5 @@ Siehe [REQUIREMENTS.md §9](./REQUIREMENTS.md#9-offene-entscheidungen-im-projekt
 
 Zusätzlich aufgekommen:
 
-- [ ] **Test-Setup** (Vitest / Karma+Jasmine / Node-Test-Runner). Übergangsweise läuft
-      `npm run check:model` als schlichtes Node-Skript in `tools/`; sobald ein Framework
-      steht, wandern die Fälle dorthin.
-- [ ] **Zoneless Change Detection?** Angular läuft noch mit Zone.js
-      (`provideZoneChangeDetection`). REQUIREMENTS §3 nennt Signals — konsequent wäre
-      `provideZonelessChangeDetection`. Umstellung jetzt trivial, später aufwendiger.
+- [ ] **`AbortSignal.timeout()` auf Android prüfen** — braucht Chromium 103+, siehe
+      [Plan](./plans/netzwerk-scan.md). Betrifft den Scan direkt.
