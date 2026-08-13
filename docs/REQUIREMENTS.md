@@ -79,6 +79,16 @@ die robustere Grenze zwischen Angular und der Tauri-Brücke.
   setzen.
 - **Windows:** Binary ist im MVP unsigniert → SmartScreen-Warnung. In README/Download-Seite
   erklären. Code-Signing/winget später prüfen.
+- **Kein Critical-CSS-Inlining im Produktionsbuild**
+  (`optimization.styles.inlineCritical: false` in `angular.json`). Angular schreibt sonst
+  einen Teil der Styles als `<style>` in die `index.html` und lädt den Rest per
+  `media="print" onload="this.media='all'"` nach. Beides bricht unter Tauri: Der
+  `onload`-Handler ist Inline-JavaScript und wird von der CSP verworfen, und in das
+  `<style>`-Element setzt Tauri beim Ausliefern eine Nonce, die es an `style-src` anhängt —
+  sobald dort eine Nonce steht, ignorieren Browser laut CSP Level 3 das `'unsafe-inline'`.
+  Damit werden auch die zur Laufzeit eingefügten Komponenten-Styles blockiert: Die App
+  startet komplett unformatiert. Im Dev-Server fällt das nicht auf, weil dort weder
+  Optimierung noch CSP greifen.
 
 ## 4. Funktionsumfang MVP
 
