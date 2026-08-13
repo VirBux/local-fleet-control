@@ -18,7 +18,9 @@ Bei Widersprüchen gilt REQUIREMENTS.md.
 ## Konventionen
 
 - **Sprache:** Antworten und Code-Kommentare auf Deutsch. UI-Texte fünfsprachig
-  (DE/EN/ES/FR/HR), keine hartcodierten Strings.
+  (DE/EN/ES/FR/HR), keine hartcodierten Strings: Texte liegen in `src/app/i18n/`, Deutsch ist
+  die Referenzsprache (definiert die Schlüssel), im Template `t('key')` (REQUIREMENTS §4.6).
+  Neue Texte immer in allen fünf Dateien ergänzen — der Compiler erzwingt es.
 - **Tech-Stack ist festgelegt** (Tauri 2 + Angular, eine Codebasis) — keine alternativen
   Frameworks vorschlagen, ohne explizit zu fragen. Rust-Anteil minimal halten.
 - **Zoneless:** Zustand, der die Ansicht beeinflusst, gehört in Signals — ohne Zone.js löst

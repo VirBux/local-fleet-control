@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { StorageService } from '../core/storage.service';
+import { PROJECT_FILE, StorageService } from '../core/storage.service';
 import {
   emptyAssignment,
   emptyProjectData,
@@ -58,7 +58,7 @@ export class ProjectService {
    * Fehler von beiden.
    */
   private async load(): Promise<void> {
-    const stored = parseProjectData(await this.storage.read(PROJECT_STORAGE_KEY));
+    const stored = parseProjectData(await this.storage.read(PROJECT_STORAGE_KEY, PROJECT_FILE));
     if (!this.touched) {
       this.data.set(stored);
     }
@@ -207,6 +207,6 @@ export class ProjectService {
     const next = change(this.data());
     this.touched = true;
     this.data.set(next);
-    void this.storage.write(PROJECT_STORAGE_KEY, next);
+    void this.storage.write(PROJECT_STORAGE_KEY, next, PROJECT_FILE);
   }
 }

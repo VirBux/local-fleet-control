@@ -73,3 +73,18 @@
       Laden ist asynchron, Nutzereingaben vor dem Laden gewinnen. Begründung in
       REQUIREMENTS §4.4.1 und im [Plan](./plans/projektstruktur.md). 153 Tests grün,
       `cargo check` sauber
+- [x] **Mehrsprachigkeit (DE/EN/ES/FR/HR)** — alle UI-Texte liegen in `src/app/i18n/`, die
+      Sprache ist im Kopf der App umschaltbar und wird in `settings.json` gemerkt. Beim
+      ersten Start gilt die Systemsprache, passt keine, Englisch.
+- [x] **Entscheidung i18n: eigener Signal-Service statt Bibliothek** (REQUIREMENTS §4.6).
+      Angular-Bordmittel (`$localize`) scheiden aus — ein Build pro Sprache lässt sich zur
+      Laufzeit nicht umschalten. Gegenüber ngx-translate spart der eigene Service eine
+      Abhängigkeit, die bei jedem Angular-Major nachziehen muss, und passt zur zoneless
+      Change Detection. Deutsch ist die Referenzsprache: Der Schlüsseltyp leitet sich daraus
+      ab, eine fehlende Übersetzung ist ein Compilerfehler.
+- [x] **Zweite Ablagedatei `settings.json`** neben `projects.json` (REQUIREMENTS §4.4) — die
+      Anlage wird einmal exportiert (§5), Einstellungen dieser Installation nicht.
+- [x] **`DeviceError` trägt jetzt Codes statt fertiger Sätze**, damit eine schon sichtbare
+      Fehlermeldung beim Sprachwechsel mitwandert. 175 Tests grün (22 mehr als zuvor,
+      darunter der Nachweis, dass kein Wörterbuch einen Platzhalter der Referenzsprache
+      verliert)

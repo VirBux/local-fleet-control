@@ -1,6 +1,9 @@
 # Offene Aufgaben
 
 > Erledigtes wandert nach [TODO_DONE.md](./TODO_DONE.md). Detailpläne unter `docs/plans/`.
+>
+> Alle „am echten Gerät gegentesten"-Punkte sind in [TESTPLAN.md](./TESTPLAN.md) zum Abhaken
+> ausformuliert.
 
 ## 1. Scaffolding
 
@@ -31,9 +34,12 @@ Status, Kanal-Ermittlung und das Schalten von Relais sind gebaut
 - [ ] **Schalten am echten Gerät gegentesten** — `.183` (Plus 1PM) und `.228` (1PM Mini)
       müssen schaltbar sein, `.216` als „nicht steuerbar (pm1)" und `.251` als
       „nicht steuerbar (light)" erscheinen. Bisher nur durch Tests abgedeckt.
-- [ ] **Spike-Oberfläche in `app.component.html` ersetzen** — provisorisch, mit hartcodierten
-      deutschen Texten (Verstoß gegen REQUIREMENTS §4.6, bewusst temporär). Inzwischen die
-      größte Baustelle: Projektleiste, Scan und Geräteliste liegen alle in einer Komponente
+- [ ] **Spike-Oberfläche in `app.component.html` ersetzen** — inzwischen die größte Baustelle:
+      Projektleiste, Scan und Geräteliste liegen alle in einer Komponente. Die Texte kommen
+      seit der i18n aus `app/i18n/`, die Struktur ist weiter provisorisch
+- [ ] Einstellungsansicht (REQUIREMENTS §4.5: Sprache, Update-Check, Scan-Bereich) — die
+      Sprachauswahl sitzt behelfsweise im Kopf der App
+- [ ] Suchfeld/Filter über die Geräteliste (REQUIREMENTS §4.5)
 - [ ] Scan-Ergebnis als Liste (Name, Typ-Icon, Status)
 - [ ] Kanalnamen aus `Shelly.GetConfig` holen — bisher nur „Kanal 1/2"
 
@@ -42,9 +48,9 @@ Status, Kanal-Ermittlung und das Schalten von Relais sind gebaut
 Gebaut ([Plan](./plans/projektstruktur.md), REQUIREMENTS §4.4.1): Projekte, Kategorien, Räume,
 eigene Namen, gruppierte Liste.
 
-- [ ] **Ablage am echten Gerät gegentesten** — schreibt `projects.json` tatsächlich ins
-      App-Datenverzeichnis und überlebt einen Neustart? Bisher nur durch Tests mit
-      Speicher-Double abgedeckt
+- [ ] **Ablage am echten Gerät gegentesten** — schreiben `projects.json` und `settings.json`
+      (Sprache) tatsächlich ins App-Datenverzeichnis und überleben einen Neustart? Bisher nur
+      durch Tests mit Speicher-Double abgedeckt
 - [ ] Gespeicherte Geräteliste beim Start sofort anzeigen (REQUIREMENTS §4.4) — bisher wird
       nur die Zuordnung persistiert, die Geräte selbst kommen ausschließlich aus dem Scan
 - [ ] Räume/Kategorien umbenennen und umsortieren (bisher nur anlegen und löschen)
@@ -55,7 +61,6 @@ eigene Namen, gruppierte Liste.
 - [ ] Rollladen
 - [ ] Geräte-Auth (Gen1 Basic, Gen2/3 Digest SHA-256)
 - [ ] Persistenz der Credentials (Geräteliste und Namen: siehe §4)
-- [ ] i18n (DE/EN/ES/FR/HR)
 - [ ] Update-Check gegen GitHub-Releases-API
 - [ ] CI/Release-Workflow (Windows-Installer + signiertes Android-APK)
 

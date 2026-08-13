@@ -1,5 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { PlatformService } from './core/platform.service';
+import { I18nService } from './i18n/i18n.service';
+import {
+  LANGUAGES,
+  LANGUAGE_NAMES,
+  isLanguage,
+  type MessageKey,
+} from './i18n/messages';
 import {
   displayName,
   entityKey,
@@ -8,7 +15,7 @@ import {
   type GroupMode,
 } from './project/project.model';
 import { ProjectService } from './project/project.service';
-import { ControlService, DeviceError } from './shelly/control.service';
+import { ControlService, DeviceError, type DeviceErrorCode } from './shelly/control.service';
 import { DiscoveryService, scanSettingsFor, type ScanProgress } from './shelly/discovery.service';
 import {
   MAX_HOSTS,
@@ -32,20 +39,41 @@ export interface RangePreset {
   disabledReason: string | null;
 }
 
+/**
+ * Fehler eines Geräts – als Code, übersetzt wird erst beim Anzeigen (REQUIREMENTS §4.6).
+ *
+ * `unexpected` deckt ab, was gar kein `DeviceError` war: ein Fehler in der App selbst.
+ * Er gehört nicht in den `ControlService`, der ihn nie auslöst.
+ */
+export interface DeviceFailure {
+  code: DeviceErrorCode | 'unexpected';
+  params: Record<string, string | number>;
+}
+
+/** Fehlercode zu Textschlüssel. Als Tabelle, damit der Compiler die Lücken findet. */
+const ERROR_KEYS: Record<DeviceFailure['code'], MessageKey> = {
+  unreachable: 'error.unreachable',
+  locked: 'error.locked',
+  badJson: 'error.badJson',
+  badStatus: 'error.badStatus',
+  http: 'error.http',
+  unexpected: 'error.unexpected',
+};
+
 /** Ist-Zustand und Bedienbarkeit eines gefundenen Geräts. */
 export interface DeviceState {
   /** `null`, solange nichts bestätigt ist: beim Laden und nach einem Fehlschlag. */
   status: DeviceStatus | null;
   /** Eine Abfrage oder ein Befehl läuft gerade. */
   busy: boolean;
-  /** Fehlermeldung genau dieses Geräts – nie global, sonst wird die Liste unbrauchbar. */
-  error: string;
+  /** Fehler genau dieses Geräts – nie global, sonst wird die Liste unbrauchbar. */
+  error: DeviceFailure | null;
   /** Passwortgeschützt: Aktionen gesperrt, bis die Geräte-Auth gebaut ist. */
   locked: boolean;
 }
 
 /** Zustand eines gerade gefundenen Geräts: Die Statusabfrage läuft bereits. */
-const PENDING: DeviceState = { status: null, busy: true, error: '', locked: false };
+const PENDING: DeviceState = { status: null, busy: true, error: null, locked: false };
 
 /**
  * Eine Zeile der Geräteliste: ein Kanal – oder das Gerät selbst, solange bzw. weil es
@@ -61,6 +89,8 @@ export interface DeviceRow {
   channelLabel: string;
   /** Was in der Liste steht: eigener Name aus dem Projekt, sonst der des Geräts. */
   label: string;
+  /** Fehlertext in der eingestellten Sprache; leer, wenn alles in Ordnung ist. */
+  errorText: string;
   /** Zuordnung im aktiven Projekt; `null` ohne Projekt oder ohne Zuordnung. */
   assignment: Assignment | null;
 }
@@ -75,7 +105,18 @@ export class AppComponent {
   private readonly discovery = inject(DiscoveryService);
   private readonly control = inject(ControlService);
   private readonly platform = inject(PlatformService);
+  private readonly i18n = inject(I18nService);
   readonly projects = inject(ProjectService);
+
+  /**
+   * Übersetzt einen Text. Kurz gehalten, weil im Template fast jede Zeile sie aufruft;
+   * als Feld weitergereicht, damit `this` nicht verloren geht.
+   */
+  readonly t = this.i18n.t;
+
+  readonly language = this.i18n.language;
+  readonly languages = LANGUAGES;
+  readonly languageNames = LANGUAGE_NAMES;
 
   /** Version aus tauri.conf.json – im Browser (ng serve) nicht verfügbar. */
   readonly version = signal('');
@@ -126,7 +167,12 @@ export class AppComponent {
       return {
         label: `${network.interface} — ${formatScanRange(range)}`,
         cidr: formatScanRange(range),
-        disabledReason: hosts === 0 ? 'keine Geräteadressen' : hosts > MAX_HOSTS ? 'zu groß' : null,
+        disabledReason:
+          hosts === 0
+            ? this.t('scan.reasonNoHosts')
+            : hosts > MAX_HOSTS
+              ? this.t('scan.reasonTooLarge')
+              : null,
       };
     }),
   );
@@ -136,25 +182,25 @@ export class AppComponent {
   /** Leerer String = Eingabe ist in Ordnung. */
   readonly rangeError = computed(() => {
     if (!this.rangeInput().trim()) {
-      return 'Bereich angeben, z. B. 192.168.1.0/24';
+      return this.t('range.empty');
     }
 
     const range = this.range();
     if (!range) {
-      return 'Ungültiger Bereich. Beispiel: 192.168.1.0/24';
+      return this.t('range.invalid');
     }
 
     const hosts = hostCountForPrefix(range.prefixLen);
     if (hosts === 0) {
       // Typisch für Tailscale- und WireGuard-Adressen: ein /32 ist genau ein Rechner.
-      return `Ein /${range.prefixLen} enthält keine Geräteadressen — hier ist nichts zu finden.`;
+      return this.t('range.noHosts', { prefix: range.prefixLen });
     }
     if (hosts > MAX_HOSTS) {
-      return `Bereich zu groß (${hosts} Adressen, erlaubt sind ${MAX_HOSTS}). Kleiner wählen, z. B. /24.`;
+      return this.t('range.tooLarge', { hosts, max: MAX_HOSTS });
     }
     if (!isPrivateRange(range)) {
       // REQUIREMENTS §8: keine Fremd-Endpunkte, die App ist kein Portscanner.
-      return 'Nur private Netze: 10.x, 172.16–31.x, 192.168.x oder 100.64–127.x.';
+      return this.t('range.notPrivate');
     }
     return '';
   });
@@ -184,6 +230,9 @@ export class AppComponent {
           state,
           channelLabel,
           label: displayName(assignment, channelLabel ? `${deviceName} · ${channelLabel}` : deviceName),
+          // Hier übersetzt, nicht beim Fehlschlag: So wechselt auch eine schon stehende
+          // Fehlermeldung die Sprache mit.
+          errorText: state.error ? this.t(ERROR_KEYS[state.error.code], state.error.params) : '',
           assignment,
         };
       };
@@ -193,7 +242,10 @@ export class AppComponent {
       }
       // Für Menschen ab 1 zählen; die Kanalnummer der API beginnt bei 0.
       return channels.map((channel) =>
-        toRow(channel, channels.length > 1 ? `Kanal ${channel.id + 1}` : ''),
+        toRow(
+          channel,
+          channels.length > 1 ? this.t('device.channel', { number: channel.id + 1 }) : '',
+        ),
       );
     });
   });
@@ -275,7 +327,7 @@ export class AppComponent {
       this.setState(device, {
         status: null,
         busy: false,
-        error: 'Passwortgeschützt — Anmeldung ist noch nicht gebaut.',
+        error: { code: 'locked', params: {} },
         locked: true,
       });
       return;
@@ -284,10 +336,10 @@ export class AppComponent {
     // Der zuletzt bestätigte Zustand bleibt während der Abfrage stehen: Er ist das Letzte,
     // was das Gerät wirklich gemeldet hat — nur bedienen lässt er sich derweil nicht. Ihn
     // wegzuwerfen würde die Zeile bei jeder Nachfrage kurz zusammenklappen lassen.
-    this.setState(device, { ...this.stateFor(device), busy: true, error: '' });
+    this.setState(device, { ...this.stateFor(device), busy: true, error: null });
     try {
       const status = await this.control.getStatus(device);
-      this.setState(device, { status, busy: false, error: '', locked: false });
+      this.setState(device, { status, busy: false, error: null, locked: false });
     } catch (cause) {
       this.setState(device, failureFor(cause));
     }
@@ -303,7 +355,7 @@ export class AppComponent {
       return;
     }
 
-    this.setState(row.device, { ...this.stateFor(row.device), busy: true, error: '' });
+    this.setState(row.device, { ...this.stateFor(row.device), busy: true, error: null });
     try {
       await this.control.setSwitch(row.device, row.channel.id, action);
     } catch (cause) {
@@ -369,6 +421,13 @@ export class AppComponent {
     this.projects.assign(row.entityKey, patch);
   }
 
+  /** Sprache umstellen; der Service merkt sie sich dauerhaft. */
+  selectLanguage(value: string): void {
+    if (isLanguage(value)) {
+      this.i18n.setLanguage(value);
+    }
+  }
+
   /** Externe Links im System-Browser öffnen, nicht im App-Fenster. */
   openHomepage(event: Event): void {
     event.preventDefault();
@@ -384,7 +443,9 @@ export class AppComponent {
  * genau das optimistische UI, das REQUIREMENTS §4.2 ausschließt.
  */
 function failureFor(cause: unknown): DeviceState {
-  const locked = cause instanceof DeviceError && cause.locked;
-  const error = cause instanceof DeviceError ? cause.message : String(cause);
-  return { status: null, busy: false, error, locked };
+  const error: DeviceFailure =
+    cause instanceof DeviceError
+      ? { code: cause.code, params: cause.params }
+      : { code: 'unexpected', params: {} };
+  return { status: null, busy: false, error, locked: error.code === 'locked' };
 }

@@ -20,22 +20,41 @@ import {
 const DEVICE_TIMEOUT_MS = 5000;
 
 /**
+ * Was schiefgegangen ist – als Code, nicht als Satz.
+ *
+ * Der Grund: Der fertige Text hinge an der Sprache, die beim Fehlschlag gerade
+ * eingestellt war, und bliebe nach einem Sprachwechsel stehen. Übersetzt wird deshalb
+ * erst beim Anzeigen (REQUIREMENTS §4.6); die Codes entsprechen den `error.*`-Schlüsseln.
+ */
+export type DeviceErrorCode = 'unreachable' | 'locked' | 'badJson' | 'badStatus' | 'http';
+
+/**
  * Fehler eines einzelnen Geräts.
  *
  * Wird pro Gerät angezeigt, nie global: Ein nicht erreichbares Gerät darf die Liste nicht
  * unbrauchbar machen.
  */
 export class DeviceError extends Error {
+  readonly code: DeviceErrorCode;
+
+  /** Werte für die Platzhalter des Textes, etwa der HTTP-Status. */
+  readonly params: Record<string, string | number>;
+
+  constructor(code: DeviceErrorCode, params: Record<string, string | number> = {}) {
+    // Als Meldung dient der Code selbst: Angezeigt wird er nie, er landet nur in
+    // Stacktraces – ein deutscher Satz wäre dort keine bessere Auskunft.
+    super(code);
+    this.name = 'DeviceError';
+    this.code = code;
+    this.params = params;
+  }
+
   /**
    * Gerät verlangt eine Anmeldung. Solange die Geräte-Auth nicht gebaut ist
    * (REQUIREMENTS §4.3), sind Aktionen gesperrt – das ist etwas anderes als ein Fehler.
    */
-  readonly locked: boolean;
-
-  constructor(message: string, locked = false) {
-    super(message);
-    this.name = 'DeviceError';
-    this.locked = locked;
+  get locked(): boolean {
+    return this.code === 'locked';
   }
 }
 
@@ -56,12 +75,12 @@ export class ControlService {
     try {
       data = await response.json();
     } catch {
-      throw new DeviceError('Antwort auf die Statusabfrage war kein JSON.');
+      throw new DeviceError('badJson');
     }
 
     const status = parseDeviceStatus(device.generation, data);
     if (!status) {
-      throw new DeviceError('Unerwartete Antwort auf die Statusabfrage.');
+      throw new DeviceError('badStatus');
     }
     return status;
   }
@@ -89,16 +108,16 @@ export class ControlService {
       });
     } catch {
       // Timeout, Gerät aus, kein Netz – für die Anzeige alles dasselbe.
-      throw new DeviceError('Gerät nicht erreichbar.');
+      throw new DeviceError('unreachable');
     }
 
     if (response.status === 401) {
       // Passwortschutz kann auch nach dem Scan eingeschaltet worden sein. Nicht als
       // anonymen Fehler verschlucken, sondern als „gesperrt" kennzeichnen.
-      throw new DeviceError('Passwortgeschützt — Anmeldung ist noch nicht gebaut.', true);
+      throw new DeviceError('locked');
     }
     if (!response.ok) {
-      throw new DeviceError(`Gerät antwortet mit HTTP ${response.status}.`);
+      throw new DeviceError('http', { status: response.status });
     }
     return response;
   }

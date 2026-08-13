@@ -28,4 +28,15 @@ export class PlatformService {
   async openExternal(url: string): Promise<void> {
     await openUrl(url);
   }
+
+  /**
+   * Sprachwünsche des Systems, beste zuerst (`de-AT`, `de`, `en`).
+   *
+   * Grundlage für die Sprache beim allerersten Start, solange nichts gespeichert ist.
+   * Hier statt direkt in der i18n, weil es ein Plattform-Zugriff ist und im Test ersetzbar
+   * sein muss (REQUIREMENTS §3.1).
+   */
+  preferredLanguages(): readonly string[] {
+    return navigator.languages?.length ? navigator.languages : [navigator.language];
+  }
 }

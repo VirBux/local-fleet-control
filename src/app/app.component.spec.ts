@@ -65,6 +65,9 @@ function setup(overrides: Partial<DiscoveryService> = {}, controlOverrides: Part
   const platform = {
     getAppVersion: () => Promise.resolve('0.1.0'),
     openExternal: vi.fn(() => Promise.resolve()),
+    // Sprache festnageln: Sonst hinge jeder erwartete Text an der Locale, mit der die
+    // Testumgebung gerade läuft.
+    preferredLanguages: () => ['de'],
   };
 
   // Eigener Speicher je Test – sonst schleppen sich Projekte von Test zu Test.
@@ -117,6 +120,23 @@ describe('AppComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('powered by HA Fleet Manager');
     expect(text).toContain('v0.1.0');
+  });
+
+  it('stellt die Oberfläche auf die gewählte Sprache um', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Geräte suchen');
+
+    fixture.componentInstance.selectLanguage('en');
+    await fixture.whenStable();
+
+    // Zugleich die Probe aufs Exempel für zoneless: Der Wechsel muss ohne Zone.js ein
+    // Rendering auslösen, sonst stünde hier noch der deutsche Text.
+    expect(element.textContent).toContain('Find devices');
+    expect(element.textContent).not.toContain('Geräte suchen');
+    // Der Produktname bleibt in jeder Sprache stehen.
+    expect(element.textContent).toContain('Local Fleet Control');
   });
 
   it('schlägt beim Start das eigene Netz als Scan-Bereich vor', async () => {
@@ -315,16 +335,17 @@ describe('AppComponent', () => {
 
       expect(control.getStatus).not.toHaveBeenCalled();
 
-      const state = fixture.componentInstance.rows()[0].state;
-      expect(state.locked).toBe(true);
-      expect(state.error).toContain('Passwortgeschützt');
+      const [row] = fixture.componentInstance.rows();
+      expect(row.state.locked).toBe(true);
+      expect(row.state.error?.code).toBe('locked');
+      expect(row.errorText).toContain('Passwortgeschützt');
       // Ohne Kanal gibt es auch nichts zu schalten.
       expect(fixture.componentInstance.rows()[0].channel).toBeNull();
     });
 
     it('behandelt einen 401 im Betrieb wie ein gesperrtes Gerät', async () => {
       const { fixture } = setup(scanFindet(geraet), {
-        getStatus: () => Promise.reject(new DeviceError('Passwortgeschützt — …', true)),
+        getStatus: () => Promise.reject(new DeviceError('locked')),
       });
       await fixture.whenStable();
 
@@ -338,7 +359,7 @@ describe('AppComponent', () => {
       const { fixture } = setup(scanFindet(geraet, zweitgeraet), {
         getStatus: (device) =>
           device.mac === geraet.mac
-            ? Promise.reject(new DeviceError('Gerät nicht erreichbar.'))
+            ? Promise.reject(new DeviceError('unreachable'))
             : Promise.resolve(einKanalAus),
       });
       await fixture.whenStable();
@@ -347,7 +368,7 @@ describe('AppComponent', () => {
       await fixture.whenStable();
 
       const [kaputt, heil] = fixture.componentInstance.rows();
-      expect(kaputt.state.error).toBe('Gerät nicht erreichbar.');
+      expect(kaputt.errorText).toBe('Gerät nicht erreichbar.');
       expect(heil.channel).toEqual({ id: 0, on: false });
       // Die globale Fehlerzeile bleibt dem Scan vorbehalten.
       expect(fixture.componentInstance.error()).toBe('');
@@ -356,7 +377,7 @@ describe('AppComponent', () => {
     it('fragt auf „Erneut versuchen" hin neu ab', async () => {
       const getStatus = vi
         .fn(() => Promise.resolve(einKanalAus))
-        .mockRejectedValueOnce(new DeviceError('Gerät nicht erreichbar.'));
+        .mockRejectedValueOnce(new DeviceError('unreachable'));
 
       const { fixture } = setup(scanFindet(geraet), { getStatus });
       await fixture.whenStable();

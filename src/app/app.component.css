@@ -5,6 +5,10 @@
 }
 
 .app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
 }
@@ -13,6 +17,17 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+/* Beschriftung nur für Screenreader: Neben einer Liste von Sprachnamen wäre das Wort
+   „Sprache" für Sehende Ballast, ohne Label bliebe das Feld für Screenreader stumm. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .app-main {

@@ -130,6 +130,10 @@ die robustere Grenze zwischen Angular und der Tauri-Brücke.
   liefern zusätzlich ein `id`-Feld — das ist die MAC mit Modellpräfix und fehlt bei Gen1.
 - Credentials so sicher wie plattformüblich möglich ablegen (Tauri Stronghold-Plugin oder
   OS-Keystore; Entscheidung dokumentieren).
+- **Zwei Dateien im App-Datenverzeichnis:** `projects.json` für die Anlage (§4.4.1) und
+  `settings.json` für Einstellungen dieser Installation — bisher die Sprache (§4.6). Getrennt,
+  weil nur die Anlage exportiert und an einen Endkunden übergeben wird (§5): Die Sprache des
+  Integrators hat auf dessen Rechner nichts zu suchen.
 - Beim App-Start wird die gespeicherte Liste **sofort** angezeigt (Notfall-Anforderung: keine
   Wartezeit), Erreichbarkeit wird im Hintergrund geprüft; Neu-Scan auf Knopfdruck.
 
@@ -172,8 +176,26 @@ bedienbar. Detailplan: [docs/plans/projektstruktur.md](./plans/projektstruktur.m
 ### 4.6 Mehrsprachigkeit
 
 - **5 Sprachen ab MVP: DE, EN, ES, FR, HR** (konsistent zum Hauptprodukt). Keine hartcodierten
-  UI-Texte; i18n von Anfang an (ngx-translate oder Angular-Bordmittel — früh entscheiden und
-  dokumentieren).
+  UI-Texte.
+- **Die Sprache ist zur Laufzeit umschaltbar und wird dauerhaft gemerkt.** Beim ersten Start
+  gilt die Systemsprache, passt keine, Englisch.
+- **Umgesetzt mit einem eigenen Signal-Service** (`app/i18n/`), nicht mit einer Bibliothek.
+  Begründung: Die Angular-Bordmittel (`$localize`) scheiden aus, weil sie einen Build pro
+  Sprache erzeugen — zur Laufzeit umschalten lässt sich das nicht. Gegenüber ngx-translate
+  spart der eigene Service eine Abhängigkeit, die bei jedem Angular-Major nachziehen muss
+  (dieselbe Überlegung wie bei Vitest statt Karma, §3.1), und er passt zur zoneless Change
+  Detection: Die Sprache ist ein Signal, `t()` liest es, ein Wechsel rendert jede betroffene
+  Ansicht neu. Der Umfang ist gering, weil die App weder Pluralformen noch Datums- oder
+  Zahlenformate übersetzt.
+- **Aufruf im Template als Methode** (`t('scan.start')`), nicht als Pipe: Eine reine Pipe
+  würde ihr Ergebnis zwischenspeichern und beim Sprachwechsel den alten Text stehen lassen.
+  Die Schlüssel sind typgeprüft — Deutsch ist die Referenzsprache, aus der sich der
+  Schlüsseltyp ableitet; eine fehlende Übersetzung ist damit ein Compilerfehler.
+- **Fehlermeldungen aus Diensten tragen Codes, keine Sätze** (`DeviceError.code`). Übersetzt
+  wird erst beim Anzeigen, sonst bliebe eine bereits sichtbare Meldung nach dem Sprachwechsel
+  in der alten Sprache stehen.
+- Nicht übersetzt werden Produkt- und Markenname sowie Nutzerdaten (Geräte-, Raum- und
+  Kategorienamen, §4.4.1).
 
 ### 4.7 Update-Check
 
@@ -223,7 +245,6 @@ bedienbar. Detailplan: [docs/plans/projektstruktur.md](./plans/projektstruktur.m
 
 ## 9. Offene Entscheidungen (im Projekt klären und hier nachtragen)
 
-- i18n-Bibliothek (ngx-translate vs. Angular-Bordmittel)
 - Credentials-Speicher konkret (Stronghold vs. OS-Keystore pro Plattform)
 - Android-Keystore-Erzeugung und -Aufbewahrung
 - Mindest-Android-Version / Windows-Version
