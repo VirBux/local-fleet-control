@@ -15,27 +15,32 @@ nicht schaltbar), `.251` (light, noch nicht unterstützt).
 
 ## 0. Vorbereitung
 
-- [ ] `npm run tauri dev` startet, das Fenster öffnet sich
-- [ ] Eine Änderung an einer `.html`-Datei erscheint ohne Neustart im Fenster (Hot-Reload)
-- [ ] Keine roten Meldungen in der DevTools-Konsole (Rechtsklick → *Inspect Element*)
+- [ x ] `npm run tauri dev` startet, das Fenster öffnet sich
+- [ x ] Eine Änderung an einer `.html`-Datei erscheint ohne Neustart im Fenster (Hot-Reload)
+- [ x ] Keine roten Meldungen in der DevTools-Konsole (Rechtsklick → *Inspect Element*)
+
+--> Error vorhanden
+
+ERROR The resource id 629958297 is invalid.
+handleError	@	root_effect_scheduler.mjs:3637
 
 ## 1. Start und Grundgerüst
 
-- [ ] Fußzeile zeigt **„powered by HA Fleet Manager"** und die Versionsnummer aus
+- [ x ] Fußzeile zeigt **„powered by HA Fleet Manager"** und die Versionsnummer aus
       `tauri.conf.json`
-- [ ] Klick auf die Fußzeile öffnet ha-fleet-manager.com im **System-Browser**, nicht im
+- [ x ] Klick auf die Fußzeile öffnet ha-fleet-manager.com im **System-Browser**, nicht im
       App-Fenster
-- [ ] Der Kopf zeigt „Local Fleet Control" — in jeder Sprache unverändert
+- [ x ] Der Kopf zeigt „Local Fleet Control" — in jeder Sprache unverändert
 
 ## 2. Sprache (neu, bisher nur durch Tests abgedeckt)
 
-- [ ] Beim allerersten Start (siehe *Zurücksetzen* unten) steht die App auf **Deutsch**, weil
+- [ x ] Beim allerersten Start (siehe *Zurücksetzen* unten) steht die App auf **Deutsch**, weil
       Windows deutsch ist
-- [ ] Die Auswahl im Kopf listet **Deutsch, English, Español, Français, Hrvatski** — jede in
+- [ x ] Die Auswahl im Kopf listet **Deutsch, English, Español, Français, Hrvatski** — jede in
       ihrer eigenen Schreibweise
-- [ ] Umschalten wechselt **sofort** alle Texte: Knöpfe, Platzhalter in den Eingabefeldern,
+- [ x ] Umschalten wechselt **sofort** alle Texte: Knöpfe, Platzhalter in den Eingabefeldern,
       Gruppenüberschriften
-- [ ] Nach `Alt+F4` und Neustart ist die gewählte Sprache **noch eingestellt**
+- [ x ] Nach `Alt+F4` und Neustart ist die gewählte Sprache **noch eingestellt**
 - [ ] `%APPDATA%\com.hafleetmanager.localfleetcontrol\settings.json` existiert und enthält
       die Sprache
 - [ ] `projects.json` enthält **keine** Sprache (sie gehört nicht in den späteren Export)
@@ -50,16 +55,22 @@ nicht schaltbar), `.251` (light, noch nicht unterstützt).
 
 ## 3. Netzwerk-Scan
 
-- [ ] Beim Start steht das eigene Netz als Vorschlag im Feld (`192.168.1.0/24`)
+- [ x ] Beim Start steht das eigene Netz als Vorschlag im Feld (`192.168.1.0/24`)
 - [ ] „Eigene Netze" listet die Interfaces; ein Tailscale-/WireGuard-Eintrag (`/32`) ist
       **gesperrt** mit dem Hinweis „keine Geräteadressen"
-- [ ] Scan im eigenen Netz findet alle bekannten Geräte
-- [ ] Treffer erscheinen **während** des Scans, nicht erst am Ende; der Zähler läuft mit
-- [ ] **Scan-Dauer notieren** (unten): Wie lange dauert ein /24 im LAN?
-- [ ] **Fremdnetz über Tailscale:** `192.168.10.0/24` von Hand eintragen → werden die Geräte
+- [ x ] Scan im eigenen Netz findet alle bekannten Geräte
+- [ x ] Treffer erscheinen **während** des Scans, nicht erst am Ende; der Zähler läuft mit
+- [ x ] **Scan-Dauer notieren** (unten): Wie lange dauert ein /24 im LAN?
+
+--> Rund 5 Sekunden
+
+- [ x ] **Fremdnetz über Tailscale:** `192.168.10.0/24` von Hand eintragen → werden die Geräte
       am zweiten Standort gefunden? Reichen die 1000 ms Zeitlimit?
-- [ ] **Dauer im Fremdnetz notieren** — falls deutlich zu langsam oder unvollständig, sind
+- [ x ] **Dauer im Fremdnetz notieren** — falls deutlich zu langsam oder unvollständig, sind
       Timeout und Parallelität in `discovery.service.ts` nachzujustieren
+
+--> Rund 10 Sekunden
+
 - [ ] Achtung: Läuft WireGuard mit `AllowedIPs = 0.0.0.0/0`, schlägt jeder Scan fehl — das ist
       erwartet und in der Hilfe unter „nichts gefunden" erklärt
 
@@ -76,13 +87,13 @@ nicht schaltbar), `.251` (light, noch nicht unterstützt).
 
 ## 4. Geräte schalten
 
-- [ ] `.183` (Plus 1PM): **Ein**, **Aus**, **Umschalten** wirken am Gerät
-- [ ] `.228` (1PM Mini): dasselbe
-- [ ] Die Anzeige „An/Aus" stimmt nach jeder Aktion mit dem echten Zustand überein — auch wenn
+- [ x ] `.183` (Plus 1PM): **Ein**, **Aus**, **Umschalten** wirken am Gerät
+- [ x ] `.228` (1PM Mini): dasselbe
+- [ x ] Die Anzeige „An/Aus" stimmt nach jeder Aktion mit dem echten Zustand überein — auch wenn
       am Gerät selbst geschaltet wird und danach „Erneut versuchen" gedrückt wird
-- [ ] `.216` erscheint als **„Erkannt, nicht steuerbar (pm1)"** ohne Schaltknöpfe
-- [ ] `.251` erscheint als **„Erkannt, nicht steuerbar (light)"**
-- [ ] Ein Mehrkanalgerät (falls vorhanden) steht mit **je einem Eintrag pro Kanal** in der
+- [ x ] `.216` erscheint als **„Erkannt, nicht steuerbar (pm1)"** ohne Schaltknöpfe
+- [ x ] `.251` erscheint als **„Erkannt, nicht steuerbar (light)"**
+- [ x ] Ein Mehrkanalgerät (falls vorhanden) steht mit **je einem Eintrag pro Kanal** in der
       Liste, beschriftet „Kanal 1", „Kanal 2"
 - [ ] **Gerät vom Strom nehmen** → nur dieses zeigt einen Fehler, die übrigen bleiben
       bedienbar; „Erneut versuchen" holt es zurück, sobald es wieder da ist
