@@ -1,0 +1,134 @@
+/* Vier Spalten auf dem Desktop, gestapelt auf dem Handy — dieselbe Oberfläche auf beiden
+   (REQUIREMENTS §4.5). `auto` für die Herstellerspalte: Sie ist so breit wie ihr Inhalt,
+   nicht so breit wie das längste Modell irgendwo in der Liste. */
+:host {
+  display: grid;
+  grid-template-columns: auto minmax(10rem, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.cell {
+  min-width: 0;
+}
+
+.vendor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vendor-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.device-name {
+  font-weight: 600;
+}
+
+.device-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+.tag {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-self: end;
+}
+
+/* Der Ist-Zustand laut Gerät – nicht das, was zuletzt gedrückt wurde. */
+.channel-state {
+  min-width: 2.2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.channel-state.on {
+  color: var(--accent);
+}
+
+.status button,
+.retry {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.status button:disabled,
+.retry:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.retry {
+  margin-left: 0.4rem;
+}
+
+.device-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.device-hint.error {
+  color: #e5484d;
+}
+
+/* Die letzte Spalte beginnt eine neue Zeile und darf die volle Breite nutzen: Der
+   Zuordnungs-Editor der Projektseite braucht sie, der Knopf der Discovery nicht. */
+.actions:not(:empty) {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+@media (max-width: 34rem) {
+  :host {
+    grid-template-columns: auto 1fr;
+  }
+
+  .status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .actions:not(:empty) {
+    grid-column: 1 / -1;
+  }
+}

@@ -4,6 +4,9 @@ import type { Messages } from './messages';
 export const en: Messages = {
   'language.label': 'Language',
 
+  'tab.discovery': 'Discover',
+  'tab.project': 'Project',
+
   'project.label': 'Project:',
   'project.none': '— none —',
   'project.rename': 'Rename project',
@@ -12,6 +15,14 @@ export const en: Messages = {
   'project.create': 'Create',
   'project.delete': 'Delete project',
   'project.deleteConfirm': 'Really delete?',
+  'project.devices': 'Devices ({count})',
+  'project.refresh': 'Refresh status',
+  'project.noDevices':
+    'No devices in this project yet. Scan the network on the “Discover” tab and add ' +
+    'devices — they are then stored permanently.',
+  'project.noProject':
+    'No project selected. Create one: only a project stores devices, rooms and names ' +
+    'permanently.',
 
   'rooms.label': 'Rooms:',
   'rooms.remove': 'Remove room',
@@ -43,6 +54,8 @@ export const en: Messages = {
   'group.room': 'Room',
   'group.category': 'Category',
   'group.none': 'no grouping',
+  'group.unassignedRoom': 'No room',
+  'group.unassignedCategory': 'No category',
 
   'device.channel': 'Channel {number}',
   'device.generation': 'Gen {generation}',
@@ -56,6 +69,13 @@ export const en: Messages = {
   'device.retry': 'Try again',
   'device.unsupported': 'Detected, not controllable',
   'device.unsupportedWith': 'Detected, not controllable ({kinds})',
+  'device.vendor': 'Manufacturer',
+  'device.add': 'Add to project',
+  'device.added': 'In project',
+  'device.remove': 'Remove',
+
+  'discovery.noProject':
+    'No active project — create one on the “Project” tab, then found devices can be added.',
 
   'assignment.namePlaceholder': 'Custom name',
   'assignment.nameLabel': 'Name for {device}',

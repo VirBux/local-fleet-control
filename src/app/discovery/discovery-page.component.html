@@ -1,0 +1,106 @@
+<section class="scan-controls">
+  <input
+    type="text"
+    class="range-input"
+    [value]="rangeInput()"
+    (input)="rangeInput.set($any($event.target).value)"
+    [disabled]="scanning()"
+    placeholder="192.168.1.0/24"
+    spellcheck="false"
+    autocapitalize="off"
+    [attr.aria-label]="t('scan.rangeLabel')"
+  />
+
+  <button type="button" class="primary" [disabled]="!canScan()" (click)="scan()">
+    {{ scanning() ? t('scan.running') : t('scan.start') }}
+  </button>
+
+  @if (progress(); as p) {
+    <span class="progress">{{ p.done }} / {{ p.total }}</span>
+  }
+</section>
+
+<!-- Nur Vorschläge: Der Scan folgt der Routing-Tabelle des Systems, nicht einem
+     Interface. Fremde Netze hinter VPN/Subnet-Router werden von Hand eingetragen. -->
+@if (presets().length > 0) {
+  <section class="range-presets">
+    <span class="presets-label">{{ t('scan.presets') }}</span>
+    @for (preset of presets(); track preset.cidr) {
+      <button
+        type="button"
+        class="preset"
+        [class.active]="preset.cidr === rangeInput().trim()"
+        [disabled]="scanning() || preset.disabledReason !== null"
+        [title]="
+          preset.disabledReason
+            ? t('scan.presetBlocked', { reason: preset.disabledReason })
+            : preset.cidr
+        "
+        (click)="usePreset(preset)"
+      >
+        {{ preset.label }}@if (preset.disabledReason) { <span class="preset-reason">({{ preset.disabledReason }})</span> }
+      </button>
+    }
+  </section>
+}
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (rangeError() && !scanning()) {
+  <p class="hint">{{ rangeError() }}</p>
+}
+
+@if (networks().length === 0 && !error()) {
+  <p class="hint">{{ t('scan.noNetworks') }}</p>
+}
+
+<!-- Ohne Projekt lässt sich nichts aufnehmen. Das gehört gesagt, bevor jemand vergeblich
+     nach dem Knopf sucht. -->
+@if (!projects.activeProject() && rows().length > 0) {
+  <p class="hint">{{ t('discovery.noProject') }}</p>
+}
+
+@if (rows().length > 0) {
+  <div class="device-list" role="list">
+    @for (row of rows(); track row.entityKey) {
+      <app-device-row
+        [row]="row"
+        (switchAction)="switchChannel(row, $event)"
+        (retry)="retry(row)"
+      >
+        <!-- Aufgenommen wird das Gerät, nicht der Kanal – der Knopf steht deshalb nur an
+             der ersten Zeile eines Mehrkanalgeräts. -->
+        @if (isFirstRow(row)) {
+          @if (row.saved) {
+            <span class="added">✓ {{ t('device.added') }}</span>
+          } @else {
+            <button
+              type="button"
+              class="ghost"
+              [disabled]="!projects.activeProject()"
+              [title]="projects.activeProject() ? '' : t('discovery.noProject')"
+              (click)="addToProject(row)"
+            >
+              {{ t('device.add') }}
+            </button>
+          }
+        }
+      </app-device-row>
+    }
+  </div>
+}
+
+@if (rows().length === 0 && !scanning()) {
+  @if (scannedRange(); as range) {
+    <div class="hint no-devices">
+      <p>{{ t('empty.title', { range: format(range) }) }}</p>
+      <ul>
+        <li><strong>{{ t('empty.rangeTitle') }}</strong> {{ t('empty.rangeText') }}</li>
+        <li><strong>{{ t('empty.vpnTitle') }}</strong> {{ t('empty.vpnText') }}</li>
+        <li><strong>{{ t('empty.timeoutTitle') }}</strong> {{ t('empty.timeoutText') }}</li>
+      </ul>
+    </div>
+  }
+}

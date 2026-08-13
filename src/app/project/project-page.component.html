@@ -1,0 +1,191 @@
+<!-- Projektverwaltung: Ein Projekt bündelt Geräte, Räume und Kategorien einer Anlage.
+     Siehe docs/plans/projektstruktur.md und docs/plans/projekt-geraete.md. -->
+<section class="project-bar">
+  <label class="project-select">
+    {{ t('project.label') }}
+    <select
+      [value]="projects.activeProjectId() ?? ''"
+      (change)="selectProject($any($event.target).value)"
+    >
+      <option value="">{{ t('project.none') }}</option>
+      @for (project of projects.projects(); track project.id) {
+        <option [value]="project.id">{{ project.name }}</option>
+      }
+    </select>
+  </label>
+
+  @if (projects.activeProject(); as project) {
+    <!-- Umbenennen beim Verlassen des Feldes; der Name ist kein Freitext pro Tastendruck. -->
+    <input
+      type="text"
+      class="field"
+      [value]="project.name"
+      (change)="projects.renameProject($any($event.target).value)"
+      [attr.aria-label]="t('project.rename')"
+    />
+  }
+
+  <input
+    type="text"
+    class="field"
+    [value]="newProjectName()"
+    (input)="newProjectName.set($any($event.target).value)"
+    (keyup.enter)="createProject()"
+    [attr.placeholder]="t('project.newPlaceholder')"
+    [attr.aria-label]="t('project.newLabel')"
+  />
+  <button type="button" class="ghost" [disabled]="!newProjectName().trim()" (click)="createProject()">
+    {{ t('project.create') }}
+  </button>
+
+  @if (projects.activeProject(); as project) {
+    <button type="button" class="ghost danger" (click)="requestDelete(project.id)">
+      {{ pendingDelete() === project.id ? t('project.deleteConfirm') : t('project.delete') }}
+    </button>
+  }
+</section>
+
+@if (projects.activeProject(); as project) {
+  <section class="project-labels">
+    <div class="label-group">
+      <span class="presets-label">{{ t('rooms.label') }}</span>
+      @for (room of project.rooms; track room.id) {
+        <span class="chip">
+          {{ room.name }}
+          <button
+            type="button"
+            class="chip-remove"
+            [title]="t('rooms.remove')"
+            (click)="projects.removeRoom(room.id)"
+          >
+            ×
+          </button>
+        </span>
+      }
+      <input
+        type="text"
+        class="field"
+        [value]="newRoomName()"
+        (input)="newRoomName.set($any($event.target).value)"
+        (keyup.enter)="addRoom()"
+        [attr.placeholder]="t('rooms.addPlaceholder')"
+        [attr.aria-label]="t('rooms.addLabel')"
+      />
+    </div>
+
+    <div class="label-group">
+      <span class="presets-label">{{ t('categories.label') }}</span>
+      @for (category of project.categories; track category.id) {
+        <span class="chip">
+          {{ category.name }}
+          <button
+            type="button"
+            class="chip-remove"
+            [title]="t('categories.remove')"
+            (click)="projects.removeCategory(category.id)"
+          >
+            ×
+          </button>
+        </span>
+      }
+      <input
+        type="text"
+        class="field"
+        [value]="newCategoryName()"
+        (input)="newCategoryName.set($any($event.target).value)"
+        (keyup.enter)="addCategory()"
+        [attr.placeholder]="t('categories.addPlaceholder')"
+        [attr.aria-label]="t('categories.addLabel')"
+      />
+    </div>
+  </section>
+
+  <section class="device-header">
+    <h2>{{ t('project.devices', { count: projects.devices().length }) }}</h2>
+
+    @if (rows().length > 0) {
+      <span class="presets-label">{{ t('group.by') }}</span>
+      <button type="button" class="preset" [class.active]="groupMode() === 'room'" (click)="groupMode.set('room')">
+        {{ t('group.room') }}
+      </button>
+      <button
+        type="button"
+        class="preset"
+        [class.active]="groupMode() === 'category'"
+        (click)="groupMode.set('category')"
+      >
+        {{ t('group.category') }}
+      </button>
+      <button type="button" class="preset" [class.active]="groupMode() === 'none'" (click)="groupMode.set('none')">
+        {{ t('group.none') }}
+      </button>
+
+      <button type="button" class="ghost refresh" (click)="refreshAll()">
+        {{ t('project.refresh') }}
+      </button>
+    }
+  </section>
+
+  @if (rows().length === 0) {
+    <p class="hint">{{ t('project.noDevices') }}</p>
+  }
+
+  <!-- Ein Eintrag pro Kanal: Ein Mehrkanalgerät steht mehrfach in der Liste
+       (REQUIREMENTS §4.2), und seine Kanäle dürfen in verschiedenen Räumen liegen. -->
+  @for (group of groups(); track group.key) {
+    @if (group.title) {
+      <h3 class="group-title">{{ group.title }}</h3>
+    }
+
+    <div class="device-list" role="list">
+      @for (row of group.items; track row.entityKey) {
+        <app-device-row [row]="row" (switchAction)="switchChannel(row, $event)" (retry)="retry(row)">
+          <!-- Zuordnung. Gespeichert wird beim Verlassen des Feldes, nicht bei jedem
+               Tastendruck – sonst schriebe jeder Buchstabe in den Speicher. -->
+          <input
+            type="text"
+            class="field assignment-name"
+            [value]="row.assignment?.name ?? ''"
+            (change)="assign(row, { name: $any($event.target).value })"
+            [attr.placeholder]="t('assignment.namePlaceholder')"
+            [attr.aria-label]="t('assignment.nameLabel', { device: row.label })"
+          />
+          <select
+            class="field"
+            [value]="row.assignment?.categoryId ?? ''"
+            (change)="assign(row, { categoryId: $any($event.target).value || null })"
+            [attr.aria-label]="t('assignment.categoryLabel', { device: row.label })"
+          >
+            <option value="">{{ t('assignment.category') }}</option>
+            @for (category of project.categories; track category.id) {
+              <option [value]="category.id">{{ category.name }}</option>
+            }
+          </select>
+          <select
+            class="field"
+            [value]="row.assignment?.roomId ?? ''"
+            (change)="assign(row, { roomId: $any($event.target).value || null })"
+            [attr.aria-label]="t('assignment.roomLabel', { device: row.label })"
+          >
+            <option value="">{{ t('assignment.room') }}</option>
+            @for (room of project.rooms; track room.id) {
+              <option [value]="room.id">{{ room.name }}</option>
+            }
+          </select>
+
+          <!-- Entfernt wird das ganze Gerät samt Zuordnungen – deshalb zwei Klicks. -->
+          <button
+            type="button"
+            class="ghost danger"
+            [title]="t('device.remove')"
+            (click)="requestRemove(row.device.mac)"
+          >
+            {{ pendingRemove() === row.device.mac ? t('project.deleteConfirm') : t('device.remove') }}
+          </button>
+        </app-device-row>
+      }
+    </div>
+  }
+} @else {
+  <p class="hint">{{ t('project.noProject') }}</p>
+}

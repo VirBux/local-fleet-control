@@ -4,6 +4,9 @@ import type { Messages } from './messages';
 export const fr: Messages = {
   'language.label': 'Langue',
 
+  'tab.discovery': 'Recherche',
+  'tab.project': 'Projet',
+
   'project.label': 'Projet :',
   'project.none': '— aucun —',
   'project.rename': 'Renommer le projet',
@@ -12,6 +15,14 @@ export const fr: Messages = {
   'project.create': 'Créer',
   'project.delete': 'Supprimer le projet',
   'project.deleteConfirm': 'Vraiment supprimer ?',
+  'project.devices': 'Appareils ({count})',
+  'project.refresh': 'Actualiser l’état',
+  'project.noDevices':
+    'Aucun appareil dans le projet. Analysez le réseau dans l’onglet « Recherche » et ' +
+    'ajoutez-les — ils sont alors enregistrés durablement.',
+  'project.noProject':
+    'Aucun projet sélectionné. Créez-en un : seul un projet enregistre durablement les ' +
+    'appareils, les pièces et les noms.',
 
   'rooms.label': 'Pièces :',
   'rooms.remove': 'Retirer la pièce',
@@ -44,6 +55,8 @@ export const fr: Messages = {
   'group.room': 'Pièce',
   'group.category': 'Catégorie',
   'group.none': 'sans groupement',
+  'group.unassignedRoom': 'Sans pièce',
+  'group.unassignedCategory': 'Sans catégorie',
 
   'device.channel': 'Canal {number}',
   'device.generation': 'Gén. {generation}',
@@ -57,6 +70,14 @@ export const fr: Messages = {
   'device.retry': 'Réessayer',
   'device.unsupported': 'Détecté, non pilotable',
   'device.unsupportedWith': 'Détecté, non pilotable ({kinds})',
+  'device.vendor': 'Fabricant',
+  'device.add': 'Ajouter au projet',
+  'device.added': 'Dans le projet',
+  'device.remove': 'Retirer',
+
+  'discovery.noProject':
+    'Aucun projet actif — créez-en un dans l’onglet « Projet », puis les appareils trouvés ' +
+    'pourront être repris.',
 
   'assignment.namePlaceholder': 'Nom personnalisé',
   'assignment.nameLabel': 'Nom de {device}',

@@ -55,6 +55,7 @@ Project {
   id, name
   categories: Label[]         // frei angelegt, Reihenfolge = Anzeigereihenfolge
   rooms: Label[]
+  devices: SavedDevice[]      // nachgetragen, siehe projekt-geraete.md
   assignments: Record<entityKey, Assignment>
 }
 
@@ -77,6 +78,11 @@ verschwänden in eine Gruppe ohne Namen.
 Zuordnungen überleben ein Gerät: Verschwindet ein Shelly aus dem Scan, bleibt sein Eintrag
 gespeichert und greift wieder, sobald es zurückkommt. Aufgeräumt wird nichts automatisch —
 ein Gerät ist auch mal aus.
+
+> **Nachtrag:** Dieser Schritt speicherte nur die *Zuordnungen*; die Geräte selbst kamen
+> weiterhin ausschließlich aus dem Scan. Nachgereicht in
+> [projekt-geraete.md](./projekt-geraete.md) — dort wandert auch die Geräteliste ins Projekt,
+> und die Oberfläche zerfällt in Discovery- und Projektseite.
 
 ## Speicherung
 

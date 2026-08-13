@@ -1,0 +1,63 @@
+.scan-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.range-input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 16rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.range-presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.preset-reason {
+  color: var(--text-muted);
+}
+
+.progress {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Bereits aufgenommen: kein Knopf, sondern eine Feststellung – hier gibt es nichts mehr
+   zu tun. */
+.added {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.no-devices {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.no-devices p {
+  margin: 0 0 0.4rem;
+}
+
+.no-devices ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.no-devices li {
+  margin-bottom: 0.35rem;
+}

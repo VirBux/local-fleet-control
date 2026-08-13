@@ -1,0 +1,86 @@
+<!-- Hersteller-Spalte: Bild und Markenname. Das Bild ist ein Produktfoto, falls eines im
+     Repository liegt, sonst das Symbol zur Geräteart (siehe device-image.component.ts). -->
+<div class="cell vendor">
+  <app-device-image [kind]="row().kind" [photo]="row().photo" [alt]="row().device.model" />
+  <span class="vendor-name" [style.color]="row().vendor.color" [title]="t('device.vendor')">
+    {{ row().vendor.name }}
+  </span>
+</div>
+
+<div class="cell identity">
+  <span class="device-name">{{ row().label }}</span>
+  <span class="device-meta">
+    {{ row().device.model }} · {{ t('device.generation', { generation: row().device.generation }) }} ·
+    {{ row().device.ip }}
+    @if (row().channelLabel) {
+      · {{ row().channelLabel }}
+    }
+    @if (row().device.authEnabled) {
+      <span class="locked" [title]="t('device.protected')">🔒</span>
+    }
+  </span>
+
+  <!-- Was das Projekt über diese Entität weiß. Auf der Discovery-Seite ist das der Punkt:
+       Beim zweiten Scan soll man sehen, was schon eingeordnet ist. -->
+  @if (row().roomName || row().categoryName) {
+    <span class="tags">
+      @if (row().roomName) {
+        <span class="tag">{{ row().roomName }}</span>
+      }
+      @if (row().categoryName) {
+        <span class="tag">{{ row().categoryName }}</span>
+      }
+    </span>
+  }
+</div>
+
+<div class="cell status">
+  @if (row().channelId !== null) {
+    <span class="channel-state" [class.on]="row().on === true">
+      @if (row().on === null) {
+        —
+      } @else {
+        {{ row().on ? t('device.on') : t('device.off') }}
+      }
+    </span>
+    <button type="button" [disabled]="!canSwitch()" (click)="switchAction.emit('on')">
+      {{ t('device.turnOn') }}
+    </button>
+    <button type="button" [disabled]="!canSwitch()" (click)="switchAction.emit('off')">
+      {{ t('device.turnOff') }}
+    </button>
+    <button type="button" [disabled]="!canSwitch()" (click)="switchAction.emit('toggle')">
+      {{ t('device.toggle') }}
+    </button>
+    @if (row().state.error) {
+      <span class="device-hint error">
+        {{ row().errorText }}
+        <button type="button" class="retry" (click)="retry.emit()">{{ t('device.retry') }}</button>
+      </span>
+    }
+  } @else if (row().state.busy) {
+    <span class="device-hint">{{ t('device.loading') }}</span>
+  } @else if (row().state.locked) {
+    <span class="device-hint">🔒 {{ row().errorText }}</span>
+  } @else if (row().state.error) {
+    <span class="device-hint error">
+      {{ row().errorText }}
+      <button type="button" class="retry" (click)="retry.emit()">{{ t('device.retry') }}</button>
+    </span>
+  } @else {
+    <!-- Typ-Info ist hier der Zweck: Sie sagt, welche Komponente noch fehlt. Die Typkürzel
+         kommen vom Gerät („pm1", „light") und bleiben unübersetzt. -->
+    <span class="device-hint">
+      @if (unsupportedInfo(); as kinds) {
+        {{ t('device.unsupportedWith', { kinds }) }}
+      } @else {
+        {{ t('device.unsupported') }}
+      }
+    </span>
+  }
+</div>
+
+<!-- Seitenabhängig: „Hinzufügen" in der Discovery, Zuordnung im Projekt. -->
+<div class="cell actions">
+  <ng-content />
+</div>

@@ -39,3 +39,138 @@ body {
   /* Notfall-App: keine Textauswahl-Artefakte beim Tippen auf dem Handy. */
   -webkit-tap-highlight-color: transparent;
 }
+
+/* --- Gemeinsame Bausteine ---------------------------------------------------------------
+   Global statt in einer Komponente, seit die Oberfläche aus mehreren Seiten besteht
+   (docs/plans/projekt-geraete.md): Eingabefeld, Knopf und Liste sehen auf der Discovery-
+   und auf der Projektseite gleich aus. Angulars Komponenten-CSS ist gekapselt und könnte
+   das nur durch Verdoppeln erreichen. */
+
+.field {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+select.field,
+.project-select select {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+/* Die eine Aktion, die eine Seite ausmacht – auf der Discovery der Scan. */
+.primary {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #04160d;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ghost {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ghost:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ghost.danger {
+  color: #e5484d;
+}
+
+.preset {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.preset.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.presets-label {
+  color: var(--text-muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.chip-remove {
+  padding: 0 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chip-remove:hover {
+  color: #e5484d;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-title {
+  margin: 1.25rem 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hint {
+  color: var(--text-muted);
+}
+
+.error {
+  color: #e5484d;
+}

@@ -1,0 +1,56 @@
+.project-bar,
+.device-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.project-select {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+}
+
+.project-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.label-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.device-header {
+  margin-top: 1.25rem;
+}
+
+.device-header h2 {
+  margin: 0 0.5rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Ans Ende der Zeile, weg von den Gruppierungsknöpfen: Der Knopf macht etwas anderes –
+   er spricht mit den Geräten. */
+.refresh {
+  margin-left: auto;
+}
+
+.assignment-name {
+  flex: 1 1 8rem;
+  min-width: 0;
+  max-width: 14rem;
+}

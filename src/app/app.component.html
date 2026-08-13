@@ -15,309 +15,41 @@
   </label>
 </header>
 
+<!-- Zwei Seiten, weil es zwei Situationen gibt: einrichten (suchen, zuordnen) und
+     Notfall (schalten). Siehe docs/plans/projekt-geraete.md. -->
+<nav class="tabs" role="tablist">
+  <button
+    type="button"
+    role="tab"
+    class="tab"
+    [class.active]="tab() === 'discovery'"
+    [attr.aria-selected]="tab() === 'discovery'"
+    (click)="selectTab('discovery')"
+  >
+    {{ t('tab.discovery') }}
+  </button>
+  <button
+    type="button"
+    role="tab"
+    class="tab"
+    [class.active]="tab() === 'project'"
+    [attr.aria-selected]="tab() === 'project'"
+    (click)="selectTab('project')"
+  >
+    {{ t('tab.project') }}
+  </button>
+</nav>
+
+<!-- Beide Seiten bleiben im DOM und werden nur aus- und eingeblendet, statt sie mit `@if`
+     zu erzeugen und wegzuwerfen: Sonst wäre nach einem Blick ins Projekt das Scan-Ergebnis
+     verloren und der Scan müsste von vorn beginnen. -->
 <main class="app-main">
-  <!-- TEMPORÄRE SPIKE-OBERFLÄCHE (docs/plans/netzwerk-scan.md).
-       Dient dazu, den Netzwerk-Scan gegen echte Geräte zu prüfen. Die richtige
-       Geräteliste-UI kommt in einem eigenen Schritt; die Texte kommen inzwischen aus
-       der i18n (REQUIREMENTS §4.6). -->
-  <!-- Projektverwaltung: Ein Projekt gibt der Liste Räume und Kategorien.
-       Ohne aktives Projekt verhält sich alles wie zuvor (flache Liste).
-       Siehe docs/plans/projektstruktur.md. -->
-  <section class="project-bar">
-    <label class="project-select">
-      {{ t('project.label') }}
-      <select
-        [value]="projects.activeProjectId() ?? ''"
-        (change)="selectProject($any($event.target).value)"
-      >
-        <option value="">{{ t('project.none') }}</option>
-        @for (project of projects.projects(); track project.id) {
-          <option [value]="project.id">{{ project.name }}</option>
-        }
-      </select>
-    </label>
-
-    @if (projects.activeProject(); as project) {
-      <!-- Umbenennen beim Verlassen des Feldes; der Name ist kein Freitext pro Tastendruck. -->
-      <input
-        type="text"
-        class="project-input"
-        [value]="project.name"
-        (change)="projects.renameProject($any($event.target).value)"
-        [attr.aria-label]="t('project.rename')"
-      />
-    }
-
-    <input
-      type="text"
-      class="project-input"
-      [value]="newProjectName()"
-      (input)="newProjectName.set($any($event.target).value)"
-      (keyup.enter)="createProject()"
-      [attr.placeholder]="t('project.newPlaceholder')"
-      [attr.aria-label]="t('project.newLabel')"
-    />
-    <button type="button" class="ghost" [disabled]="!newProjectName().trim()" (click)="createProject()">
-      {{ t('project.create') }}
-    </button>
-
-    @if (projects.activeProject(); as project) {
-      <button type="button" class="ghost danger" (click)="requestDelete(project.id)">
-        {{ pendingDelete() === project.id ? t('project.deleteConfirm') : t('project.delete') }}
-      </button>
-    }
-  </section>
-
-  @if (projects.activeProject(); as project) {
-    <section class="project-labels">
-      <div class="label-group">
-        <span class="presets-label">{{ t('rooms.label') }}</span>
-        @for (room of project.rooms; track room.id) {
-          <span class="chip">
-            {{ room.name }}
-            <button
-              type="button"
-              class="chip-remove"
-              [title]="t('rooms.remove')"
-              (click)="projects.removeRoom(room.id)"
-            >
-              ×
-            </button>
-          </span>
-        }
-        <input
-          type="text"
-          class="label-input"
-          [value]="newRoomName()"
-          (input)="newRoomName.set($any($event.target).value)"
-          (keyup.enter)="addRoom()"
-          [attr.placeholder]="t('rooms.addPlaceholder')"
-          [attr.aria-label]="t('rooms.addLabel')"
-        />
-      </div>
-
-      <div class="label-group">
-        <span class="presets-label">{{ t('categories.label') }}</span>
-        @for (category of project.categories; track category.id) {
-          <span class="chip">
-            {{ category.name }}
-            <button
-              type="button"
-              class="chip-remove"
-              [title]="t('categories.remove')"
-              (click)="projects.removeCategory(category.id)"
-            >
-              ×
-            </button>
-          </span>
-        }
-        <input
-          type="text"
-          class="label-input"
-          [value]="newCategoryName()"
-          (input)="newCategoryName.set($any($event.target).value)"
-          (keyup.enter)="addCategory()"
-          [attr.placeholder]="t('categories.addPlaceholder')"
-          [attr.aria-label]="t('categories.addLabel')"
-        />
-      </div>
-    </section>
-  }
-
-  <section class="scan-controls">
-    <input
-      type="text"
-      class="range-input"
-      [value]="rangeInput()"
-      (input)="rangeInput.set($any($event.target).value)"
-      [disabled]="scanning()"
-      placeholder="192.168.1.0/24"
-      spellcheck="false"
-      autocapitalize="off"
-      [attr.aria-label]="t('scan.rangeLabel')"
-    />
-
-    <button type="button" [disabled]="!canScan()" (click)="scan()">
-      {{ scanning() ? t('scan.running') : t('scan.start') }}
-    </button>
-
-    @if (progress(); as p) {
-      <span class="progress">{{ p.done }} / {{ p.total }}</span>
-    }
-  </section>
-
-  <!-- Nur Vorschläge: Der Scan folgt der Routing-Tabelle des Systems, nicht einem
-       Interface. Fremde Netze hinter VPN/Subnet-Router werden von Hand eingetragen. -->
-  @if (presets().length > 0) {
-    <section class="range-presets">
-      <span class="presets-label">{{ t('scan.presets') }}</span>
-      @for (preset of presets(); track preset.cidr) {
-        <button
-          type="button"
-          class="preset"
-          [class.active]="preset.cidr === rangeInput().trim()"
-          [disabled]="scanning() || preset.disabledReason !== null"
-          [title]="
-            preset.disabledReason
-              ? t('scan.presetBlocked', { reason: preset.disabledReason })
-              : preset.cidr
-          "
-          (click)="usePreset(preset)"
-        >
-          {{ preset.label }}@if (preset.disabledReason) { <span class="preset-reason">({{ preset.disabledReason }})</span> }
-        </button>
-      }
-    </section>
-  }
-
-  @if (error()) {
-    <p class="error">{{ error() }}</p>
-  }
-
-  @if (rangeError() && !scanning()) {
-    <p class="hint">{{ rangeError() }}</p>
-  }
-
-  @if (networks().length === 0 && !error()) {
-    <p class="hint">{{ t('scan.noNetworks') }}</p>
-  }
-
-  @if (projects.activeProject() && rows().length > 0) {
-    <section class="group-modes">
-      <span class="presets-label">{{ t('group.by') }}</span>
-      <button type="button" class="preset" [class.active]="groupMode() === 'room'" (click)="groupMode.set('room')">
-        {{ t('group.room') }}
-      </button>
-      <button
-        type="button"
-        class="preset"
-        [class.active]="groupMode() === 'category'"
-        (click)="groupMode.set('category')"
-      >
-        {{ t('group.category') }}
-      </button>
-      <button type="button" class="preset" [class.active]="groupMode() === 'none'" (click)="groupMode.set('none')">
-        {{ t('group.none') }}
-      </button>
-    </section>
-  }
-
-  <!-- Ein Eintrag pro Kanal: Ein Mehrkanalgerät steht mehrfach in der Liste
-       (REQUIREMENTS §4.2). Die Abschnitte kommen aus dem aktiven Projekt; ohne Projekt
-       gibt es genau eine Gruppe ohne Überschrift, also die flache Liste. -->
-  @for (group of groups(); track group.key) {
-    @if (group.title) {
-      <h2 class="group-title">{{ group.title }}</h2>
-    }
-
-    <ul class="device-list">
-      @for (row of group.items; track row.entityKey) {
-        <li class="device">
-          <span class="device-name">{{ row.label }}</span>
-          <span class="device-meta">
-            {{ row.device.model }} · {{ t('device.generation', { generation: row.device.generation }) }} ·
-            {{ row.device.ip }}
-            @if (row.channelLabel) {
-              · {{ row.channelLabel }}
-            }
-            @if (row.device.authEnabled) {
-              <span class="locked" [title]="t('device.protected')">🔒</span>
-            }
-          </span>
-
-          @if (row.channel; as channel) {
-            <div class="channel-controls">
-              <span class="channel-state" [class.on]="channel.on">
-                {{ channel.on ? t('device.on') : t('device.off') }}
-              </span>
-              <button type="button" [disabled]="row.state.busy" (click)="switchChannel(row, 'on')">
-                {{ t('device.turnOn') }}
-              </button>
-              <button type="button" [disabled]="row.state.busy" (click)="switchChannel(row, 'off')">
-                {{ t('device.turnOff') }}
-              </button>
-              <button type="button" [disabled]="row.state.busy" (click)="switchChannel(row, 'toggle')">
-                {{ t('device.toggle') }}
-              </button>
-            </div>
-          } @else if (row.state.busy) {
-            <span class="device-hint">{{ t('device.loading') }}</span>
-          } @else if (row.state.locked) {
-            <span class="device-hint">🔒 {{ row.errorText }}</span>
-          } @else if (row.state.error) {
-            <span class="device-hint error">
-              {{ row.errorText }}
-              <button type="button" class="retry" (click)="loadStatus(row.device)">
-                {{ t('device.retry') }}
-              </button>
-            </span>
-          } @else {
-            <!-- Typ-Info ist hier der Zweck: Sie sagt, welche Komponente noch fehlt.
-                 Die Typkürzel kommen vom Gerät („pm1", „light") und bleiben unübersetzt. -->
-            <span class="device-hint">
-              @if (unsupportedInfo(row.state); as kinds) {
-                {{ t('device.unsupportedWith', { kinds }) }}
-              } @else {
-                {{ t('device.unsupported') }}
-              }
-            </span>
-          }
-
-          <!-- Zuordnung. Gespeichert wird beim Verlassen des Feldes, nicht bei jedem
-               Tastendruck – sonst schriebe jeder Buchstabe in den Speicher. -->
-          @if (projects.activeProject(); as project) {
-            <div class="assignment">
-              <input
-                type="text"
-                class="assignment-name"
-                [value]="row.assignment?.name ?? ''"
-                (change)="assign(row, { name: $any($event.target).value })"
-                [attr.placeholder]="t('assignment.namePlaceholder')"
-                [attr.aria-label]="t('assignment.nameLabel', { device: row.label })"
-              />
-              <select
-                class="assignment-select"
-                [value]="row.assignment?.categoryId ?? ''"
-                (change)="assign(row, { categoryId: $any($event.target).value || null })"
-                [attr.aria-label]="t('assignment.categoryLabel', { device: row.label })"
-              >
-                <option value="">{{ t('assignment.category') }}</option>
-                @for (category of project.categories; track category.id) {
-                  <option [value]="category.id">{{ category.name }}</option>
-                }
-              </select>
-              <select
-                class="assignment-select"
-                [value]="row.assignment?.roomId ?? ''"
-                (change)="assign(row, { roomId: $any($event.target).value || null })"
-                [attr.aria-label]="t('assignment.roomLabel', { device: row.label })"
-              >
-                <option value="">{{ t('assignment.room') }}</option>
-                @for (room of project.rooms; track room.id) {
-                  <option [value]="room.id">{{ room.name }}</option>
-                }
-              </select>
-            </div>
-          }
-        </li>
-      }
-    </ul>
-  }
-
-  @if (rows().length === 0) {
-    <ul class="device-list">
-      @if (!scanning() && scannedRange(); as range) {
-        <li class="hint no-devices">
-          <p>{{ t('empty.title', { range: format(range) }) }}</p>
-          <ul>
-            <li><strong>{{ t('empty.rangeTitle') }}</strong> {{ t('empty.rangeText') }}</li>
-            <li><strong>{{ t('empty.vpnTitle') }}</strong> {{ t('empty.vpnText') }}</li>
-            <li><strong>{{ t('empty.timeoutTitle') }}</strong> {{ t('empty.timeoutText') }}</li>
-          </ul>
-        </li>
-      }
-    </ul>
-  }
+  <div class="page" role="tabpanel" [hidden]="tab() !== 'discovery'">
+    <app-discovery-page />
+  </div>
+  <div class="page" role="tabpanel" [hidden]="tab() !== 'project'">
+    <app-project-page />
+  </div>
 </main>
 
 <footer class="app-footer">

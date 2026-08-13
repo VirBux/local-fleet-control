@@ -1,6 +1,9 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { PROJECT_FILE, StorageService } from '../core/storage.service';
+import { savedDeviceFrom, type SavedDevice } from '../devices/saved-device';
+import type { ShellyDevice } from '../shelly/shelly.model';
 import {
+  belongsToDevice,
   emptyAssignment,
   emptyProjectData,
   newId,
@@ -76,6 +79,7 @@ export class ProjectService {
       name: trimmed,
       categories: [],
       rooms: [],
+      devices: [],
       assignments: {},
     };
     this.apply((data) => ({
@@ -108,6 +112,89 @@ export class ProjectService {
       projects: data.projects.filter((project) => project.id !== id),
       activeProjectId: data.activeProjectId === id ? null : data.activeProjectId,
     }));
+  }
+
+  /** Die Geräte des aktiven Projekts; ohne Projekt eine leere Liste. */
+  readonly devices = computed<SavedDevice[]>(() => this.activeProject()?.devices ?? []);
+
+  /** MACs der gespeicherten Geräte – für die Markierung in der Fundliste der Discovery. */
+  readonly deviceMacs = computed(() => new Set(this.devices().map((device) => device.mac)));
+
+  /**
+   * Nimmt ein gefundenes Gerät ins aktive Projekt auf.
+   *
+   * Ist es schon drin, wird sein Eintrag aufgefrischt statt verdoppelt: Der Nutzer hat auf
+   * denselben Knopf am selben Gerät gedrückt, das kann keine zweite Zeile bedeuten.
+   */
+  addDevice(device: ShellyDevice, channelIds: number[]): void {
+    this.updateActive((project) => {
+      const saved = savedDeviceFrom(device, channelIds);
+      const known = project.devices.some((entry) => entry.mac === device.mac);
+      return {
+        ...project,
+        devices: known
+          ? project.devices.map((entry) => (entry.mac === device.mac ? saved : entry))
+          : [...project.devices, saved],
+      };
+    });
+  }
+
+  /**
+   * Zieht ein wiedergefundenes Gerät nach: neue IP nach DHCP-Wechsel, umbenannt am Gerät,
+   * andere Kanäle nach einem Moduswechsel.
+   *
+   * Schreibt nur, wenn sich wirklich etwas geändert hat. Sonst legte jede Statusabfrage
+   * die Datei neu an — bei einer Liste mit 20 Geräten im Sekundentakt.
+   *
+   * `channelIds` darf `null` sein: Solange keine Statusantwort vorliegt, ist „keine Kanäle"
+   * keine Aussage über das Gerät, sondern nur fehlendes Wissen.
+   */
+  syncDevice(device: ShellyDevice, channelIds: number[] | null): void {
+    const current = this.devices().find((entry) => entry.mac === device.mac);
+    if (!current) {
+      return;
+    }
+
+    const next: SavedDevice = {
+      ...current,
+      ip: device.ip,
+      model: device.model,
+      generation: device.generation,
+      name: device.name,
+      authEnabled: device.authEnabled,
+      firmware: device.firmware,
+      channelIds: channelIds ?? current.channelIds,
+    };
+    if (sameDevice(current, next)) {
+      return;
+    }
+
+    this.updateActive((project) => ({
+      ...project,
+      devices: project.devices.map((entry) => (entry.mac === device.mac ? next : entry)),
+    }));
+  }
+
+  /**
+   * Nimmt ein Gerät wieder aus dem Projekt – samt seiner Zuordnungen.
+   *
+   * Bewusst nur auf Klick: Ein Gerät, das nicht antwortet, bleibt stehen. Es ist vielleicht
+   * nur aus, und eine Notfall-App, die sich ihre Liste selbst wegräumt, wäre nutzlos.
+   */
+  removeDevice(mac: string): void {
+    this.updateActive((project) => {
+      const assignments: Record<string, Assignment> = {};
+      for (const [key, assignment] of Object.entries(project.assignments)) {
+        if (!belongsToDevice(key, mac)) {
+          assignments[key] = assignment;
+        }
+      }
+      return {
+        ...project,
+        devices: project.devices.filter((device) => device.mac !== mac),
+        assignments,
+      };
+    });
   }
 
   addRoom(name: string): void {
@@ -209,4 +296,18 @@ export class ProjectService {
     this.data.set(next);
     void this.storage.write(PROJECT_STORAGE_KEY, next, PROJECT_FILE);
   }
+}
+
+/** Feldweiser Vergleich – entscheidet, ob `syncDevice` überhaupt schreiben muss. */
+function sameDevice(a: SavedDevice, b: SavedDevice): boolean {
+  return (
+    a.ip === b.ip &&
+    a.model === b.model &&
+    a.generation === b.generation &&
+    a.name === b.name &&
+    a.authEnabled === b.authEnabled &&
+    a.firmware === b.firmware &&
+    a.channelIds.length === b.channelIds.length &&
+    a.channelIds.every((id, index) => id === b.channelIds[index])
+  );
 }

@@ -13,6 +13,9 @@
 export const de = {
   'language.label': 'Sprache',
 
+  'tab.discovery': 'Suchen',
+  'tab.project': 'Projekt',
+
   'project.label': 'Projekt:',
   'project.none': '— keins —',
   'project.rename': 'Projekt umbenennen',
@@ -21,6 +24,14 @@ export const de = {
   'project.create': 'Anlegen',
   'project.delete': 'Projekt löschen',
   'project.deleteConfirm': 'Wirklich löschen?',
+  'project.devices': 'Geräte ({count})',
+  'project.refresh': 'Status aktualisieren',
+  'project.noDevices':
+    'Noch keine Geräte im Projekt. Im Reiter „Suchen" das Netz durchsuchen und Geräte ' +
+    'hinzufügen — sie bleiben dann dauerhaft gespeichert.',
+  'project.noProject':
+    'Kein Projekt ausgewählt. Lege eines an: Erst ein Projekt speichert Geräte, Räume und ' +
+    'Namen dauerhaft.',
 
   'rooms.label': 'Räume:',
   'rooms.remove': 'Raum entfernen',
@@ -52,6 +63,8 @@ export const de = {
   'group.room': 'Raum',
   'group.category': 'Kategorie',
   'group.none': 'gar nicht',
+  'group.unassignedRoom': 'Ohne Raum',
+  'group.unassignedCategory': 'Ohne Kategorie',
 
   'device.channel': 'Kanal {number}',
   'device.generation': 'Gen {generation}',
@@ -65,6 +78,14 @@ export const de = {
   'device.retry': 'Erneut versuchen',
   'device.unsupported': 'Erkannt, nicht steuerbar',
   'device.unsupportedWith': 'Erkannt, nicht steuerbar ({kinds})',
+  'device.vendor': 'Hersteller',
+  'device.add': 'Zum Projekt hinzufügen',
+  'device.added': 'Im Projekt',
+  'device.remove': 'Entfernen',
+
+  'discovery.noProject':
+    'Kein Projekt aktiv — im Reiter „Projekt" eines anlegen, dann lassen sich gefundene ' +
+    'Geräte übernehmen.',
 
   'assignment.namePlaceholder': 'Eigener Name',
   'assignment.nameLabel': 'Name für {device}',

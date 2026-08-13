@@ -19,6 +19,16 @@
   font-weight: 600;
 }
 
+.language-select select {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
 /* Beschriftung nur für Screenreader: Neben einer Liste von Sprachnamen wäre das Wort
    „Sprache" für Sehende Ballast, ohne Label bliebe das Feld für Screenreader stumm. */
 .visually-hidden {
@@ -28,6 +38,32 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 0.6rem 1rem;
+  border: none;
+  /* Die aktive Seite trägt die Markenfarbe als Unterstrich – ohne Rahmen drumherum, der
+     Reiter ist kein Knopf, den man „drückt". */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab.active {
+  border-bottom-color: var(--accent);
+  color: var(--text);
 }
 
 .app-main {
@@ -56,319 +92,4 @@
 
 .version {
   color: var(--text-muted);
-}
-
-/* --- Spike-Oberfläche: wird durch die richtige Geräteliste ersetzt --- */
-
-.project-bar,
-.group-modes {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-}
-
-.project-bar select,
-.assignment-select {
-  padding: 0.3rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-}
-
-.project-select {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--text-muted);
-}
-
-.project-input,
-.label-input,
-.assignment-name {
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-}
-
-.ghost {
-  padding: 0.3rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.ghost:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.ghost.danger {
-  margin-left: auto;
-  color: #e5484d;
-}
-
-.project-labels {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.label-group {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.3rem 0.2rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 0.85rem;
-}
-
-.chip-remove {
-  padding: 0 0.25rem;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.chip-remove:hover {
-  color: #e5484d;
-}
-
-.group-title {
-  margin: 1.25rem 0 0.25rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.assignment {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
-}
-
-.assignment-name {
-  flex: 1 1 8rem;
-  min-width: 0;
-  max-width: 14rem;
-}
-
-.scan-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.scan-controls button {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: #04160d;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.scan-controls button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-
-.range-input {
-  flex: 1 1 12rem;
-  min-width: 0;
-  max-width: 16rem;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-}
-
-.range-presets {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
-}
-
-.presets-label {
-  color: var(--text-muted);
-}
-
-.preset {
-  padding: 0.25rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.preset.active {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.preset:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.preset-reason {
-  color: var(--text-muted);
-}
-
-.progress {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.error {
-  color: #e5484d;
-}
-
-.hint {
-  color: var(--text-muted);
-}
-
-.device-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.device {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.device-name {
-  font-weight: 600;
-}
-
-.device-meta {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.channel-label {
-  color: var(--text-muted);
-  font-weight: 400;
-}
-
-.device-hint {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.device-hint.error {
-  color: #e5484d;
-}
-
-.channel-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.35rem;
-}
-
-.channel-controls button,
-.retry {
-  padding: 0.25rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.channel-controls button:disabled,
-.retry:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.retry {
-  margin-left: 0.4rem;
-}
-
-/* Der Ist-Zustand laut Gerät – nicht das, was zuletzt gedrückt wurde. */
-.channel-state {
-  min-width: 2.2rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.channel-state.on {
-  color: var(--accent);
-}
-
-.no-devices {
-  font-size: 0.9rem;
-}
-
-.no-devices p {
-  margin: 0 0 0.4rem;
-}
-
-.no-devices ul {
-  margin: 0;
-  padding-left: 1.1rem;
-}
-
-.no-devices li {
-  margin-bottom: 0.35rem;
-}
-
-.no-devices code {
-  font-size: 0.85em;
 }

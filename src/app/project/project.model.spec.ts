@@ -19,6 +19,7 @@ function projekt(overrides: Partial<Project> = {}): Project {
     name: 'Musterkunde',
     categories: [licht],
     rooms: [flur, bad],
+    devices: [],
     assignments: {},
     ...overrides,
   };
@@ -71,7 +72,7 @@ describe('groupEntities', () => {
   const eintraege = [eintrag('a'), eintrag('b'), eintrag('c')];
 
   it('teilt nach Raum, in der Reihenfolge des Projekts', () => {
-    const gruppen = groupEntities(eintraege, project, 'room');
+    const gruppen = groupEntities(eintraege, project, 'room', 'Ohne Raum');
 
     // Flur steht im Projekt vor Bad – nicht alphabetisch sortieren.
     expect(gruppen.map((g) => g.title)).toEqual(['Flur', 'Bad', 'Ohne Raum']);
@@ -80,14 +81,14 @@ describe('groupEntities', () => {
   });
 
   it('teilt nach Kategorie', () => {
-    const gruppen = groupEntities(eintraege, project, 'category');
+    const gruppen = groupEntities(eintraege, project, 'category', 'Ohne Kategorie');
 
     expect(gruppen.map((g) => g.title)).toEqual(['Licht', 'Ohne Kategorie']);
     expect(gruppen[1].items).toEqual([eintrag('b'), eintrag('c')]);
   });
 
   it('lässt leere Gruppen weg', () => {
-    const gruppen = groupEntities([eintrag('a')], project, 'room');
+    const gruppen = groupEntities([eintrag('a')], project, 'room', 'Ohne Raum');
 
     expect(gruppen.map((g) => g.title)).toEqual(['Flur']);
   });
@@ -97,27 +98,27 @@ describe('groupEntities', () => {
       assignments: { a: { name: '', categoryId: null, roomId: 'gibt-es-nicht' } },
     });
 
-    const gruppen = groupEntities([eintrag('a')], veraltet, 'room');
+    const gruppen = groupEntities([eintrag('a')], veraltet, 'room', 'Ohne Raum');
 
     // Sonst verschwände das Gerät in einer Gruppe ohne Namen.
     expect(gruppen).toEqual([{ key: '', title: 'Ohne Raum', items: [eintrag('a')] }]);
   });
 
   it('liefert ohne Projekt eine einzige Gruppe ohne Überschrift', () => {
-    expect(groupEntities(eintraege, null, 'room')).toEqual([
+    expect(groupEntities(eintraege, null, 'room', 'Ohne Raum')).toEqual([
       { key: '', title: '', items: eintraege },
     ]);
   });
 
   it('liefert bei „gar nicht" eine einzige Gruppe ohne Überschrift', () => {
-    expect(groupEntities(eintraege, project, 'none')).toEqual([
+    expect(groupEntities(eintraege, project, 'none', 'Ohne Raum')).toEqual([
       { key: '', title: '', items: eintraege },
     ]);
   });
 
   it('liefert für eine leere Liste gar keine Gruppe', () => {
-    expect(groupEntities([], project, 'room')).toEqual([]);
-    expect(groupEntities([], null, 'none')).toEqual([]);
+    expect(groupEntities([], project, 'room', 'Ohne Raum')).toEqual([]);
+    expect(groupEntities([], null, 'none', 'Ohne Raum')).toEqual([]);
   });
 });
 
@@ -157,7 +158,7 @@ describe('parseProjectData', () => {
     });
 
     expect(data.projects).toEqual([
-      { id: 'p2', name: 'Heil', categories: [], rooms: [], assignments: {} },
+      { id: 'p2', name: 'Heil', categories: [], rooms: [], devices: [], assignments: {} },
     ]);
     expect(data.activeProjectId).toBe('p2');
   });

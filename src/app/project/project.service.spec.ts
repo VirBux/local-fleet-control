@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { StorageService } from '../core/storage.service';
+import type { ShellyDevice } from '../shelly/shelly.model';
 import { parseProjectData } from './project.model';
 import { PROJECT_STORAGE_KEY, ProjectService } from './project.service';
 
@@ -10,6 +11,8 @@ import { PROJECT_STORAGE_KEY, ProjectService } from './project.service';
  * echte Ablage ist eine Datei.
  */
 class FakeStorage {
+  private writes = 0;
+
   constructor(private readonly entries = new Map<string, unknown>()) {}
 
   async read(key: string): Promise<unknown> {
@@ -17,6 +20,7 @@ class FakeStorage {
   }
 
   async write(key: string, value: unknown): Promise<void> {
+    this.writes++;
     // Wie durch die Datei: Was hier ankommt, muss serialisierbar sein.
     this.entries.set(key, JSON.parse(JSON.stringify(value)));
   }
@@ -25,7 +29,22 @@ class FakeStorage {
   gespeichert() {
     return parseProjectData(this.entries.get(PROJECT_STORAGE_KEY) ?? null);
   }
+
+  /** Wie oft geschrieben wurde – für „schreibt nur bei echter Änderung". */
+  schreibzugriffe(): number {
+    return this.writes;
+  }
 }
+
+const geraet: ShellyDevice = {
+  ip: '192.168.1.50',
+  generation: 2,
+  model: 'SNSW-001X16EU',
+  mac: 'A8032ABD42EC',
+  name: 'Flurlicht',
+  authEnabled: false,
+  firmware: '1.0.7',
+};
 
 /** Erzeugt den Service und wartet, bis der gespeicherte Zustand geladen ist. */
 async function setup(vorbelegt?: unknown) {
@@ -219,6 +238,139 @@ describe('ProjectService', () => {
     expect(service.projects()).toEqual([]);
     expect(service.activeProject()).toBeNull();
     expect(storage.gespeichert()).toEqual({ version: 1, projects: [], activeProjectId: null });
+  });
+
+  describe('Geräte', () => {
+    it('nimmt ein Gerät auf und speichert es sofort', async () => {
+      const { service, storage } = await setup();
+      service.createProject('P');
+
+      service.addDevice(geraet, [0]);
+
+      expect(service.devices()).toEqual([
+        {
+          mac: geraet.mac,
+          ip: geraet.ip,
+          generation: 2,
+          model: 'SNSW-001X16EU',
+          vendorId: 'shelly',
+          name: 'Flurlicht',
+          authEnabled: false,
+          firmware: '1.0.7',
+          channelIds: [0],
+        },
+      ]);
+      // Der Punkt der ganzen Übung: Ein Neustart darf die Liste nicht verlieren.
+      expect(storage.gespeichert().projects[0].devices).toHaveLength(1);
+    });
+
+    it('ignoriert das Hinzufügen ohne aktives Projekt', async () => {
+      const { service } = await setup();
+
+      service.addDevice(geraet, [0]);
+
+      expect(service.devices()).toEqual([]);
+    });
+
+    it('frischt ein bereits aufgenommenes Gerät auf, statt es zu verdoppeln', async () => {
+      const { service } = await setup();
+      service.createProject('P');
+      service.addDevice(geraet, [0]);
+
+      service.addDevice({ ...geraet, ip: '192.168.1.99' }, [0, 1]);
+
+      expect(service.devices()).toHaveLength(1);
+      expect(service.devices()[0].ip).toBe('192.168.1.99');
+      expect(service.devices()[0].channelIds).toEqual([0, 1]);
+    });
+
+    it('zieht beim Wiederfinden die neue IP nach', async () => {
+      const { service } = await setup();
+      service.createProject('P');
+      service.addDevice(geraet, [0]);
+
+      // Dasselbe Gerät nach einem DHCP-Wechsel: gleiche MAC, andere Adresse.
+      service.syncDevice({ ...geraet, ip: '192.168.1.99' }, [0]);
+
+      expect(service.devices()[0].ip).toBe('192.168.1.99');
+    });
+
+    it('schreibt nicht, wenn sich nichts geändert hat', async () => {
+      const { service, storage } = await setup();
+      service.createProject('P');
+      service.addDevice(geraet, [0]);
+      const vorher = storage.schreibzugriffe();
+
+      service.syncDevice(geraet, [0]);
+
+      // Sonst legte jede Statusabfrage die Datei neu an – bei 20 Geräten im Sekundentakt.
+      expect(storage.schreibzugriffe()).toBe(vorher);
+    });
+
+    it('behält die gespeicherten Kanäle, solange keine Statusantwort vorliegt', async () => {
+      const { service } = await setup();
+      service.createProject('P');
+      service.addDevice(geraet, [0, 1]);
+
+      // `null` heißt „noch nichts gehört" – nicht „keine Kanäle".
+      service.syncDevice(geraet, null);
+
+      expect(service.devices()[0].channelIds).toEqual([0, 1]);
+    });
+
+    it('tut nichts für ein Gerät, das gar nicht im Projekt steht', async () => {
+      const { service } = await setup();
+      service.createProject('P');
+
+      service.syncDevice(geraet, [0]);
+
+      expect(service.devices()).toEqual([]);
+    });
+
+    it('entfernt ein Gerät samt seiner Zuordnungen', async () => {
+      const { service } = await setup();
+      service.createProject('P');
+      service.addDevice(geraet, [0, 1]);
+      service.assign(`${geraet.mac}:0`, { name: 'Deckenlampe' });
+      service.assign(`${geraet.mac}:1`, { name: 'Terrasse' });
+      service.assign('BB:0', { name: 'Anderes Gerät' });
+
+      service.removeDevice(geraet.mac);
+
+      expect(service.devices()).toEqual([]);
+      expect(service.assignmentFor(`${geraet.mac}:0`)).toBeNull();
+      expect(service.assignmentFor(`${geraet.mac}:1`)).toBeNull();
+      // Ein fremdes Gerät mit ähnlichem Schlüssel bleibt unangetastet.
+      expect(service.assignmentFor('BB:0')?.name).toBe('Anderes Gerät');
+    });
+
+    it('hält die Geräte der Projekte auseinander', async () => {
+      const { service } = await setup();
+      service.createProject('Kunde A');
+      service.addDevice(geraet, [0]);
+
+      service.createProject('Kunde B');
+
+      expect(service.devices()).toEqual([]);
+      expect(service.deviceMacs().has(geraet.mac)).toBe(false);
+    });
+
+    it('lädt gespeicherte Geräte beim Start', async () => {
+      const { service } = await setup({
+        version: 1,
+        projects: [
+          {
+            id: 'p1',
+            name: 'Alt',
+            devices: [{ mac: 'AA', ip: '192.168.1.9', generation: 2, channelIds: [0] }],
+          },
+        ],
+        activeProjectId: 'p1',
+      });
+
+      // REQUIREMENTS §4.4: Die Liste steht sofort, ohne dass jemand scannen muss.
+      expect(service.devices().map((device) => device.mac)).toEqual(['AA']);
+    });
   });
 
   it('benennt das aktive Projekt um', async () => {

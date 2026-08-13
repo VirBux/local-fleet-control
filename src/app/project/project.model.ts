@@ -2,8 +2,11 @@
  * Projektstruktur: Kategorien, Räume und eigene Namen für gefundene Geräte.
  *
  * Wie die Shelly-Modelle bewusst frei von Angular- und Tauri-Abhängigkeiten: reine
- * Funktionen auf reinen Daten. Siehe docs/plans/projektstruktur.md.
+ * Funktionen auf reinen Daten. Siehe docs/plans/projektstruktur.md und
+ * docs/plans/projekt-geraete.md.
  */
+
+import { parseSavedDevices, type SavedDevice } from '../devices/saved-device';
 
 /** Eine frei angelegte Bezeichnung – Kategorie oder Raum. */
 export interface Label {
@@ -26,6 +29,12 @@ export interface Project {
   /** Reihenfolge ist Anzeigereihenfolge – vom Nutzer bestimmt, nicht alphabetisch. */
   categories: Label[];
   rooms: Label[];
+  /**
+   * Die Geräte der Anlage, in der Reihenfolge, in der sie aufgenommen wurden. Erst sie
+   * machen das Projekt zu einer Anlage, die einen Neustart übersteht – die Zuordnungen
+   * allein beschrieben nur, wie ein Gerät heißt, wenn es der Scan wiederfindet.
+   */
+  devices: SavedDevice[];
   /** Zuordnungen nach Entitätsschlüssel (`entityKey`). */
   assignments: Record<string, Assignment>;
 }
@@ -72,6 +81,16 @@ export function entityKey(mac: string, channelId: number | null): string {
 }
 
 /**
+ * Gehört ein Entitätsschlüssel zu diesem Gerät?
+ *
+ * Nicht `startsWith(mac)` allein: Zwei MACs können sich im Präfix gleichen. Erlaubt ist
+ * genau die MAC selbst oder die MAC mit angehängtem Kanal.
+ */
+export function belongsToDevice(key: string, mac: string): boolean {
+  return key === mac || key.startsWith(`${mac}:`);
+}
+
+/**
  * Kurze, eindeutige ID für Projekte und Bezeichnungen.
  *
  * Kein `crypto.randomUUID()`: Das verlangt einen Secure Context und ist damit nicht in
@@ -94,18 +113,22 @@ export function displayName(assignment: Assignment | null, fallback: string): st
  * Räume in einer Reihenfolge angelegt, die für ihn Sinn ergibt. Nicht zugeordnete Einträge
  * kommen ans Ende: sichtbar, damit man sie zuordnet, aber nicht im Weg. Leere Gruppen
  * erscheinen nicht.
+ *
+ * `unassignedTitle` kommt von außen, weil diese Datei keine Sprache kennt: Die Überschrift
+ * der letzten Gruppe ist der einzige Text hier, und der gehört in die i18n
+ * (REQUIREMENTS §4.6).
  */
 export function groupEntities<T extends { entityKey: string }>(
   items: T[],
   project: Project | null,
   mode: GroupMode,
+  unassignedTitle: string,
 ): EntityGroup<T>[] {
   if (!project || mode === 'none') {
     return items.length > 0 ? [{ key: '', title: '', items }] : [];
   }
 
   const labels = mode === 'room' ? project.rooms : project.categories;
-  const unassignedTitle = mode === 'room' ? 'Ohne Raum' : 'Ohne Kategorie';
 
   const buckets = new Map<string, T[]>(labels.map((label) => [label.id, []]));
   const unassigned: T[] = [];
@@ -169,6 +192,7 @@ function parseProject(value: unknown): Project | null {
     name,
     categories: parseLabels(value['categories']),
     rooms: parseLabels(value['rooms']),
+    devices: parseSavedDevices(value['devices']),
     assignments: parseAssignments(value['assignments']),
   };
 }

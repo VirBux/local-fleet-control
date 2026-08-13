@@ -4,6 +4,9 @@ import type { Messages } from './messages';
 export const hr: Messages = {
   'language.label': 'Jezik',
 
+  'tab.discovery': 'Traženje',
+  'tab.project': 'Projekt',
+
   'project.label': 'Projekt:',
   'project.none': '— nijedan —',
   'project.rename': 'Preimenuj projekt',
@@ -12,6 +15,14 @@ export const hr: Messages = {
   'project.create': 'Stvori',
   'project.delete': 'Obriši projekt',
   'project.deleteConfirm': 'Stvarno obrisati?',
+  'project.devices': 'Uređaji ({count})',
+  'project.refresh': 'Osvježi stanje',
+  'project.noDevices':
+    'U projektu još nema uređaja. Na kartici „Traženje” pretraži mrežu i dodaj ih — tada ' +
+    'ostaju trajno spremljeni.',
+  'project.noProject':
+    'Nije odabran projekt. Stvori jedan: tek projekt trajno sprema uređaje, prostorije i ' +
+    'nazive.',
 
   'rooms.label': 'Prostorije:',
   'rooms.remove': 'Ukloni prostoriju',
@@ -43,6 +54,8 @@ export const hr: Messages = {
   'group.room': 'Prostoriji',
   'group.category': 'Kategoriji',
   'group.none': 'bez grupiranja',
+  'group.unassignedRoom': 'Bez prostorije',
+  'group.unassignedCategory': 'Bez kategorije',
 
   'device.channel': 'Kanal {number}',
   'device.generation': 'Gen {generation}',
@@ -56,6 +69,14 @@ export const hr: Messages = {
   'device.retry': 'Pokušaj ponovno',
   'device.unsupported': 'Prepoznato, nije upravljivo',
   'device.unsupportedWith': 'Prepoznato, nije upravljivo ({kinds})',
+  'device.vendor': 'Proizvođač',
+  'device.add': 'Dodaj u projekt',
+  'device.added': 'U projektu',
+  'device.remove': 'Ukloni',
+
+  'discovery.noProject':
+    'Nema aktivnog projekta — stvori ga na kartici „Projekt”, zatim se pronađeni uređaji ' +
+    'mogu preuzeti.',
 
   'assignment.namePlaceholder': 'Vlastiti naziv',
   'assignment.nameLabel': 'Naziv za {device}',

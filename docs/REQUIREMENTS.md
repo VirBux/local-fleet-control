@@ -144,9 +144,17 @@ die robustere Grenze zwischen Angular und der Tauri-Brücke.
 Anlage mit 20 Geräten ist als flache Liste unbrauchbar; Räume und Kategorien machen sie
 bedienbar. Detailplan: [docs/plans/projektstruktur.md](./plans/projektstruktur.md).
 
-- Ein **Projekt** bündelt Kategorien, Räume und die Zuordnung der Entitäten. Mehrere Projekte
-  sind möglich, eines ist aktiv. Ein Projekt ist zugleich die Einheit, die das geplante
-  Export/Import-Feature (§5) transportieren wird — ein Integrator betreut mehrere Kunden.
+- Ein **Projekt** bündelt die Geräte, Kategorien, Räume und die Zuordnung der Entitäten.
+  Mehrere Projekte sind möglich, eines ist aktiv. Ein Projekt ist zugleich die Einheit, die
+  das geplante Export/Import-Feature (§5) transportieren wird — ein Integrator betreut
+  mehrere Kunden.
+- **Die Geräteliste gehört ins Projekt** (`Project.devices`, Detailplan:
+  [docs/plans/projekt-geraete.md](./plans/projekt-geraete.md)). Aufgenommen wird ein Gerät
+  ausschließlich auf Klick, entfernt ebenso — ein Gerät, das nicht antwortet, ist vielleicht
+  nur aus und bleibt stehen. Wird ein bekanntes Gerät wiedergefunden, ziehen IP, Name und
+  Kanäle nach; gefunden wird es über die MAC, nicht über die Adresse.
+- Jeder Eintrag trägt eine **Hersteller-ID** (MVP: immer `shelly`). Sie kostet jetzt nichts
+  und erspart eine Migration, wenn Tasmota und WLED dazukommen (§5).
 - **Kategorien und Räume legt der Nutzer selbst an**, sie sind nicht vorgegeben. Sie sind
   damit Nutzerdaten und bleiben — wie Gerätenamen — von der i18n (§4.6) unberührt.
 - Zugeordnet wird die **Entität** (`MAC:Kanal`), nicht das Gerät: Ein Shelly 2PM kann
@@ -167,7 +175,18 @@ bedienbar. Detailplan: [docs/plans/projektstruktur.md](./plans/projektstruktur.m
 
 ### 4.5 UI
 
-- Eine Hauptansicht: Geräteliste mit Name, Typ-Icon, Status, Aktions-Buttons; Suchfeld/Filter.
+- **Zwei Seiten als Reiter** (Detailplan:
+  [docs/plans/projekt-geraete.md](./plans/projekt-geraete.md)), weil es zwei Situationen
+  gibt: **Discovery** (einrichten — Netz durchsuchen, Geräte ins Projekt aufnehmen) und
+  **Projekt** (Anlage definieren und im Notfall bedienen). Die Projektseite kommt ohne Netz
+  aus; die Discovery zeigt an jedem Fund, was das Projekt darüber schon weiß. Beim Start
+  öffnet die App die Projektseite, sobald das aktive Projekt Geräte hat.
+- Jede Zeile führt eine **Hersteller-Spalte**: Markenname und Bild. Das Bild ist ein
+  Produktfoto aus `src/assets/devices/`, falls für die Modellkennung eines hinterlegt ist,
+  sonst ein selbst gezeichnetes Symbol zur Geräteart. **Herstellerlogos und Produktfotos
+  liegen nicht im Repository** — sie gehören ihren Herstellern und wären mit Apache-2.0
+  (§6) nicht vereinbar. Der Markenname als Wort ist zulässige nominative Nennung.
+- Geräteliste mit Name, Typ-Icon, Status, Aktions-Buttons; Suchfeld/Filter.
 - Umbenennen und Credentials-Eingabe pro Gerät; Einstellungen (Sprache, Update-Check,
   Scan-Bereich falls das Subnetz abweicht).
 - Footer/Info-Bereich: „powered by HA Fleet Manager" + Link, Versionsnummer, Lizenzhinweis.

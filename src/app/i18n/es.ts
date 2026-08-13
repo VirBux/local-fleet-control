@@ -4,6 +4,9 @@ import type { Messages } from './messages';
 export const es: Messages = {
   'language.label': 'Idioma',
 
+  'tab.discovery': 'Buscar',
+  'tab.project': 'Proyecto',
+
   'project.label': 'Proyecto:',
   'project.none': '— ninguno —',
   'project.rename': 'Renombrar proyecto',
@@ -12,6 +15,14 @@ export const es: Messages = {
   'project.create': 'Crear',
   'project.delete': 'Eliminar proyecto',
   'project.deleteConfirm': '¿Eliminar de verdad?',
+  'project.devices': 'Dispositivos ({count})',
+  'project.refresh': 'Actualizar estado',
+  'project.noDevices':
+    'Todavía no hay dispositivos en el proyecto. Explora la red en la pestaña «Buscar» y ' +
+    'añádelos — así quedan guardados de forma permanente.',
+  'project.noProject':
+    'Ningún proyecto seleccionado. Crea uno: solo un proyecto guarda dispositivos, ' +
+    'estancias y nombres de forma permanente.',
 
   'rooms.label': 'Habitaciones:',
   'rooms.remove': 'Quitar habitación',
@@ -43,6 +54,8 @@ export const es: Messages = {
   'group.room': 'Habitación',
   'group.category': 'Categoría',
   'group.none': 'sin agrupar',
+  'group.unassignedRoom': 'Sin estancia',
+  'group.unassignedCategory': 'Sin categoría',
 
   'device.channel': 'Canal {number}',
   'device.generation': 'Gen {generation}',
@@ -56,6 +69,14 @@ export const es: Messages = {
   'device.retry': 'Reintentar',
   'device.unsupported': 'Detectado, no controlable',
   'device.unsupportedWith': 'Detectado, no controlable ({kinds})',
+  'device.vendor': 'Fabricante',
+  'device.add': 'Añadir al proyecto',
+  'device.added': 'En el proyecto',
+  'device.remove': 'Quitar',
+
+  'discovery.noProject':
+    'Ningún proyecto activo — crea uno en la pestaña «Proyecto» y podrás incorporar los ' +
+    'dispositivos encontrados.',
 
   'assignment.namePlaceholder': 'Nombre propio',
   'assignment.nameLabel': 'Nombre de {device}',

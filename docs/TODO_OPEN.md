@@ -33,14 +33,15 @@ Status, Kanal-Ermittlung und das Schalten von Relais sind gebaut
 - [ ] **Schalten am echten Gerät gegentesten** — `.183` (Plus 1PM) und `.228` (1PM Mini)
       müssen schaltbar sein, `.216` als „nicht steuerbar (pm1)" und `.251` als
       „nicht steuerbar (light)" erscheinen. Bisher nur durch Tests abgedeckt.
-- [ ] **Spike-Oberfläche in `app.component.html` ersetzen** — inzwischen die größte Baustelle:
-      Projektleiste, Scan und Geräteliste liegen alle in einer Komponente. Die Texte kommen
-      seit der i18n aus `app/i18n/`, die Struktur ist weiter provisorisch
 - [ ] Einstellungsansicht (REQUIREMENTS §4.5: Sprache, Update-Check, Scan-Bereich) — die
       Sprachauswahl sitzt behelfsweise im Kopf der App
 - [ ] Suchfeld/Filter über die Geräteliste (REQUIREMENTS §4.5)
-- [ ] Scan-Ergebnis als Liste (Name, Typ-Icon, Status)
 - [ ] Kanalnamen aus `Shelly.GetConfig` holen — bisher nur „Kanal 1/2"
+- [ ] **Produktfotos** in `src/assets/devices/` hinterlegen und in `DEVICE_PHOTOS`
+      (`devices/vendor.ts`) eintragen — nur mit geklärter Lizenz, siehe REQUIREMENTS §4.5.
+      Ohne Eintrag zeigt die Liste das Symbol zur Geräteart
+- [ ] Geräteart-Heuristik gegen echte Modellkennungen prüfen (`deviceKind`) — sie bestimmt
+      nur das Symbol, aber ein Dimmer mit Steckdosen-Bild sieht nach Fehler aus
 
 ## 4. Projektstruktur
 
@@ -50,9 +51,8 @@ eigene Namen, gruppierte Liste.
 - [ ] **Ablage am echten Gerät gegentesten** — schreiben `projects.json` und `settings.json`
       (Sprache) tatsächlich ins App-Datenverzeichnis und überleben einen Neustart? Bisher nur
       durch Tests mit Speicher-Double abgedeckt
-- [ ] Gespeicherte Geräteliste beim Start sofort anzeigen (REQUIREMENTS §4.4) — bisher wird
-      nur die Zuordnung persistiert, die Geräte selbst kommen ausschließlich aus dem Scan
 - [ ] Räume/Kategorien umbenennen und umsortieren (bisher nur anlegen und löschen)
+- [ ] Geräte im Projekt umsortieren (bisher Reihenfolge der Aufnahme)
 
 ## 5. Iterativ danach (Reihenfolge gemeinsam festlegen)
 

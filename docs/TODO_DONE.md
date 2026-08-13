@@ -97,3 +97,26 @@
       16–256 px, PNGs 16/32/48/64, Apple-Touch 180, 192/512) sowie alle App-Icons unter
       `src-tauri/icons/` inkl. Android-Mipmaps (`npx tauri icon`). iOS-Icons wurden entfernt,
       da außerhalb des Scope.
+- [x] **`icon.ico` mit voller Größenstaffel** (`scripts/generate-ico.ps1`) — `tauri icon`
+      legt nur 16/32/128/256 px hinein, die Taskleiste greift je nach Anzeigeskalierung aber
+      zu 24/30/36/48 px und skaliert sichtbar unsauber herunter.
+- [x] **Geräte werden im Projekt gespeichert; Discovery und Projekt sind getrennte Seiten**
+      ([Plan](./plans/projekt-geraete.md), REQUIREMENTS §4.4.1/§4.5). Bisher überlebte nur
+      die Zuordnung einen Neustart, die Geräte selbst kamen ausschließlich aus dem Scan —
+      die Notfall-Anforderung aus §4.4 („Liste sofort anzeigen") war damit nicht erfüllt.
+      Jetzt: `Project.devices` in `projects.json`, Aufnahme und Entfernen ausschließlich auf
+      Klick, IP/Name/Kanäle ziehen beim Wiederfinden über die MAC nach. Die Projektseite
+      rendert ohne Netz, der Ist-Zustand wandert im Hintergrund nach; die Discovery zeigt an
+      jedem Fund, was das Projekt schon weiß. Die Spike-Oberfläche aus `app.component.html`
+      ist damit abgelöst: `DiscoveryPageComponent`, `ProjectPageComponent`,
+      `DeviceRowComponent` und `DeviceStateService` statt einer Komponente für alles.
+      223 Tests grün (48 mehr als zuvor)
+- [x] **Hersteller-Spalte in der Geräteliste** (REQUIREMENTS §4.5): Markenname und Bild je
+      Zeile, Hersteller-ID an jedem gespeicherten Gerät. Produktfotos werden über
+      `DEVICE_PHOTOS` (`devices/vendor.ts`) eingehängt; solange keines hinterlegt ist, zeigt
+      die Liste ein selbst gezeichnetes Symbol zur Geräteart. **Entscheidung: keine
+      Herstellerlogos und keine Produktfotos im Repository** — sie gehören ihren Herstellern
+      und wären mit Apache-2.0 nicht vereinbar.
+- [x] **Überschrift der nicht zugeordneten Gruppe übersetzt** — „Ohne Raum" / „Ohne
+      Kategorie" standen als einzige Texte hartcodiert deutsch in `project.model.ts`
+      (Verstoß gegen REQUIREMENTS §4.6); `groupEntities` bekommt sie jetzt von außen.
