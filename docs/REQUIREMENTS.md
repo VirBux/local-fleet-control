@@ -47,8 +47,9 @@ lokalen Netzwerk.
   Rust-HTTP-Stack ist nicht nötig.
 - **Projektstruktur (Tauri-Standard):** `src/` (Angular), `src-tauri/` (Rust/Config);
   Plattform-Artefakte entstehen beim Build.
-- **Build-Targets MVP:** Windows (.msi/.exe), Android (.apk). **iOS ist Phase 2** (erfordert
-  Apple-Developer-Account, 99 $/Jahr — bewusst verschoben, keine Kosten im MVP).
+- **Build-Targets MVP:** Windows (portable .exe, **kein Installer**), Android (.apk). **iOS ist
+  Phase 2** (erfordert Apple-Developer-Account, 99 $/Jahr — bewusst verschoben, keine Kosten im
+  MVP). Begründung und Konsequenzen: §7.1.
 
 ### 3.1 Tests
 
@@ -223,15 +224,55 @@ bedienbar. Detailplan: [docs/plans/projektstruktur.md](./plans/projektstruktur.m
   ohne Garantie auf Annahme. Positionierung: „Open Source, maintained by HA Fleet Manager".
   Kein Community-Aufbau als Ziel; Ein-Maintainer-Modell ist der Normalfall.
 - README: Screenshot, Notfall-Szenario erklärt, Download-Links, SmartScreen-/Sideload-Hinweise,
-  „powered by"-Abschnitt.
+  Hinweis auf die WebView2-Voraussetzung (§7.1), „powered by"-Abschnitt.
 
 ## 7. Distribution & CI
 
-- **GitHub Releases** als einziger Verteilkanal: GitHub Actions baut pro Tag/Release
-  Windows-Installer und Android-APK (signiert mit eigenem Keystore; Keystore-Handling
-  dokumentieren) und hängt sie ans Release.
+- **GitHub Releases** als führender Verteilkanal: GitHub Actions baut pro Tag/Release die
+  portable Windows-Datei und das Android-APK (signiert mit eigenem Keystore; Keystore-Handling
+  dokumentieren) und hängt sie ans Release. Die Landingpage spiegelt dieselben Dateien, der
+  Update-Check (§4) prüft weiterhin gegen die GitHub-Releases-API.
 - **Landingpage** auf ha-fleet-manager.com (Tool-Seite, SEO, verlinkt auf Releases) — wird im
-  **Hauptrepo** umgesetzt, nicht hier; hier nur stabiler Link-Slug festlegen.
+  **Hauptrepo** umgesetzt, nicht hier; hier nur stabiler Link-Slug festlegen. Die jeweils
+  aktuelle Windows-Datei wird dort zusätzlich manuell hinterlegt (Upload durch den Maintainer).
+
+### 7.1 Windows: portable Einzeldatei statt Installer
+
+**Entscheidung:** Für Windows wird ausschließlich die portable Einzeldatei ausgeliefert. Weder
+MSI noch NSIS-Setup werden veröffentlicht.
+
+Begründung: Local Fleet Control ist das Werkzeug für den Moment, in dem Home Assistant nicht
+mehr erreichbar ist. In dieser Situation soll niemand einen Installer durchklicken — eine Datei,
+Doppelklick, fertig. Die Datei ist selbstständig (~14 MB) und lässt sich auf einem USB-Stick oder
+Notebook vorhalten. Tauri erzeugt sie ohne Zusatzaufwand mit.
+
+Konsequenzen, die daraus folgen:
+
+- **WebView2-Runtime** wird vorausgesetzt und *nicht* mitinstalliert (der wegfallende
+  NSIS-Installer hätte sie bei Bedarf nachgezogen). Auf Windows 11 und aktuellem Windows 10 ist
+  sie vorhanden; auf frisch aufgesetzten Systemen fehlt sie ggf. README muss das nennen.
+- **Kein Auto-Update:** Der Tauri-Updater ersetzt eine frei liegende Datei nicht zuverlässig.
+  Aktualisierung heißt: neue Datei herunterladen, alte ersetzen. Der Update-Check (§4) meldet
+  daher nur, er installiert nicht.
+- **Kein Startmenü-Eintrag**, kein Deinstallations-Eintrag. Löschen der Datei entfernt die
+  Anwendung; die Konfiguration verbleibt in AppData.
+- **Nicht stick-portabel im engeren Sinn:** Die Konfiguration (`tauri-plugin-store`) liegt in
+  AppData, nicht neben der Datei. Auf einem fremden Rechner startet die App ohne Geräteliste.
+  Bewusst so — fremde Rechner sollen nicht mit eigenen IPs hinterlassen werden. In der
+  Kommunikation deshalb „ohne Installation", nicht „portable".
+
+### 7.2 Dateinamen der Release-Artefakte
+
+Die Versionsnummer steht **am Ende** des Dateinamens, ohne weitere Suffixe dahinter:
+
+- Windows: `LocalFleetControl-0.1.0.exe`
+- Android: `LocalFleetControl-0.1.0.apk`
+
+Gilt für GitHub Releases und für die auf ha-fleet-manager.com hinterlegten Dateien gleichermaßen.
+
+Ohne Bundling heißt die gebaute Datei nach dem Crate-Namen
+(`src-tauri/target/release/local-fleet-control.exe`), nicht nach `productName`. Das Umbenennen
+auf das obige Schema ist Aufgabe des Release-Workflows.
 
 ## 8. Sicherheit & Privacy
 

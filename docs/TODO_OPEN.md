@@ -62,7 +62,10 @@ eigene Namen, gruppierte Liste.
 - [ ] Geräte-Auth (Gen1 Basic, Gen2/3 Digest SHA-256)
 - [ ] Persistenz der Credentials (Geräteliste und Namen: siehe §4)
 - [ ] Update-Check gegen GitHub-Releases-API
-- [ ] CI/Release-Workflow (Windows-Installer + signiertes Android-APK)
+- [ ] CI/Release-Workflow (portable Windows-.exe + signiertes Android-APK), Dateinamen und
+      Verzicht auf Installer siehe [REQUIREMENTS §7.1/§7.2](./REQUIREMENTS.md#71-windows-portable-einzeldatei-statt-installer)
+- [ ] Bundler-Targets in `src-tauri/tauri.conf.json` von `"all"` auf portable-only umstellen
+      (baut derzeit MSI und NSIS unnötig mit)
 
 ## Offene Entscheidungen
 
