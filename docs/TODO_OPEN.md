@@ -11,7 +11,6 @@
       `tauri build` läuft bereits
 - [ ] Android-Target konfigurieren (`tauri android init`), inkl. `networkSecurityConfig`
       für Cleartext-HTTP ins LAN (REQUIREMENTS §3.2) — bewusst nach dem Windows-MVP
-- [ ] App-Icons ersetzen (aktuell noch die Tauri-Default-Icons in `src-tauri/icons/`)
 - [ ] Repo-Feinschliff auf GitHub: Topics (`home-assistant`, `shelly`, `tauri`, `smart-home`),
       Issue-Templates, Beschreibung ggf. anpassen
 

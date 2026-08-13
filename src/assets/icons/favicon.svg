@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Local Fleet Control">
+  <title>Local Fleet Control</title>
+  <defs>
+    <linearGradient id="bg" gradientUnits="userSpaceOnUse" x1="256" y1="0" x2="256" y2="512">
+      <stop offset="0" stop-color="#1d2b25"/>
+      <stop offset="1" stop-color="#0f1513"/>
+    </linearGradient>
+    <!-- userSpaceOnUse: der senkrechte Balken hat eine Bounding-Box der Breite 0 und
+         wuerde mit objectBoundingBox-Verlauf gar nicht gezeichnet. -->
+    <linearGradient id="fg" gradientUnits="userSpaceOnUse" x1="256" y1="87" x2="256" y2="427">
+      <stop offset="0" stop-color="#43dc97"/>
+      <stop offset="1" stop-color="#22a86c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
+  <g fill="none" stroke="url(#fg)" stroke-width="50" stroke-linecap="round">
+    <path d="M341.65 178.88 A128 128 0 1 1 170.35 178.88"/>
+    <path d="M256 112 L256 236"/>
+  </g>
+</svg>

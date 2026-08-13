@@ -88,3 +88,12 @@
       Fehlermeldung beim Sprachwechsel mitwandert. 175 Tests grün (22 mehr als zuvor,
       darunter der Nachweis, dass kein Wörterbuch einen Platzhalter der Referenzsprache
       verliert)
+
+## 2026-08-13
+
+- [x] **Eigenes Icon statt der Tauri-Default-Icons** — Power-Symbol in Emerald (`#2FC883`)
+      auf dunklem Squircle, bewusst reduziert, damit es bei 16 px noch lesbar ist. Quelle ist
+      `src/assets/icons/favicon.svg`; daraus generiert: Favicon (SVG, `favicon.ico` mit
+      16–256 px, PNGs 16/32/48/64, Apple-Touch 180, 192/512) sowie alle App-Icons unter
+      `src-tauri/icons/` inkl. Android-Mipmaps (`npx tauri icon`). iOS-Icons wurden entfernt,
+      da außerhalb des Scope.
