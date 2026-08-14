@@ -139,7 +139,12 @@
 
     <div class="device-list" role="list">
       @for (row of group.items; track row.entityKey) {
-        <app-device-row [row]="row" (switchAction)="switchChannel(row, $event)" (retry)="retry(row)">
+        <app-device-row
+          [row]="row"
+          (switchAction)="switchChannel(row, $event)"
+          (coverAction)="moveCover(row, $event)"
+          (retry)="retry(row)"
+        >
           <!-- Zuordnung. Gespeichert wird beim Verlassen des Feldes, nicht bei jedem
                Tastendruck – sonst schriebe jeder Buchstabe in den Speicher. -->
           <input

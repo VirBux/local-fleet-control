@@ -77,6 +77,12 @@
   color: var(--accent);
 }
 
+/* „Geschlossen 40 %" – der Zustand trägt, die Zahl ergänzt. */
+.position {
+  margin-left: 0.3rem;
+  font-weight: 400;
+}
+
 .status button,
 .retry {
   padding: 0.25rem 0.7rem;

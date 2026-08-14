@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { PROJECT_FILE, StorageService } from '../core/storage.service';
-import { savedDeviceFrom, type SavedDevice } from '../devices/saved-device';
+import { savedDeviceFrom, type DeviceChannels, type SavedDevice } from '../devices/saved-device';
 import type { ShellyDevice } from '../shelly/shelly.model';
 import {
   belongsToDevice,
@@ -126,9 +126,9 @@ export class ProjectService {
    * Ist es schon drin, wird sein Eintrag aufgefrischt statt verdoppelt: Der Nutzer hat auf
    * denselben Knopf am selben Gerät gedrückt, das kann keine zweite Zeile bedeuten.
    */
-  addDevice(device: ShellyDevice, channelIds: number[]): void {
+  addDevice(device: ShellyDevice, channels: DeviceChannels): void {
     this.updateActive((project) => {
-      const saved = savedDeviceFrom(device, channelIds);
+      const saved = savedDeviceFrom(device, channels);
       const known = project.devices.some((entry) => entry.mac === device.mac);
       return {
         ...project,
@@ -146,10 +146,10 @@ export class ProjectService {
    * Schreibt nur, wenn sich wirklich etwas geändert hat. Sonst legte jede Statusabfrage
    * die Datei neu an — bei einer Liste mit 20 Geräten im Sekundentakt.
    *
-   * `channelIds` darf `null` sein: Solange keine Statusantwort vorliegt, ist „keine Kanäle"
+   * `channels` darf `null` sein: Solange keine Statusantwort vorliegt, ist „keine Kanäle"
    * keine Aussage über das Gerät, sondern nur fehlendes Wissen.
    */
-  syncDevice(device: ShellyDevice, channelIds: number[] | null): void {
+  syncDevice(device: ShellyDevice, channels: DeviceChannels | null): void {
     const current = this.devices().find((entry) => entry.mac === device.mac);
     if (!current) {
       return;
@@ -163,7 +163,8 @@ export class ProjectService {
       name: device.name,
       authEnabled: device.authEnabled,
       firmware: device.firmware,
-      channelIds: channelIds ?? current.channelIds,
+      channelIds: channels?.switchIds ?? current.channelIds,
+      coverIds: channels?.coverIds ?? current.coverIds,
     };
     if (sameDevice(current, next)) {
       return;
@@ -307,7 +308,11 @@ function sameDevice(a: SavedDevice, b: SavedDevice): boolean {
     a.name === b.name &&
     a.authEnabled === b.authEnabled &&
     a.firmware === b.firmware &&
-    a.channelIds.length === b.channelIds.length &&
-    a.channelIds.every((id, index) => id === b.channelIds[index])
+    sameIds(a.channelIds, b.channelIds) &&
+    sameIds(a.coverIds, b.coverIds)
   );
+}
+
+function sameIds(a: number[], b: number[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
 }

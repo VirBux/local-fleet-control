@@ -120,3 +120,29 @@
 - [x] **Überschrift der nicht zugeordneten Gruppe übersetzt** — „Ohne Raum" / „Ohne
       Kategorie" standen als einzige Texte hartcodiert deutsch in `project.model.ts`
       (Verstoß gegen REQUIREMENTS §4.6); `groupEntities` bekommt sie jetzt von außen.
+
+## 2026-08-14
+
+- [x] **Rollladen steuern** ([Plan](./plans/rollladen.md), REQUIREMENTS §4.2, Teil 2 nach
+      dem Relais). Bisher fielen Rollläden in „erkannt, nicht steuerbar": Gen1 über die
+      Sonderregel zu `mode: "roller"`, ab Gen2 über die Komponente `cover:<id>`. Jetzt:
+      `DeviceStatus.covers` als **eigene Liste** neben `channels` (ein Rollladen teilt mit
+      einem Relais kein Feld und keinen Befehl), Auf/Stopp/Zu über `/roller/<id>?go=…` bzw.
+      `Cover.Open|Close|Stop`, Zustand und Position aus dem Gerät. **Stopp bleibt auch
+      während einer laufenden Abfrage klickbar** — genau dann fährt der Rollladen.
+      Entitätsschlüssel `MAC:cover:<id>`, weil Relais- und Rollladennummern beide bei 0
+      beginnen; `SavedDevice.coverIds` hält die beiden Arten in `projects.json`
+      auseinander (alte Dateien bleiben lesbar). Texte in allen fünf Sprachen.
+      249 Tests grün (26 mehr als zuvor). **Am echten Gerät ungeprüft** — im Testnetz hängt
+      kein Rollladen, siehe TESTPLAN Abschnitt 4b.
+- [x] Gegenprüfung der Rollladen-Änderung durch einen Agenten mit frischem Kontext. Zwei
+      echte Befunde, beide am Stopp-Knopf, behoben: (1) Nach einer gescheiterten
+      Statusabfrage war ausgerechnet Stopp gesperrt, weil er am bestätigten Zustand hing —
+      er hängt jetzt an der Kanalart. (2) Bei zwei gleichzeitig offenen Vorgängen konnte die
+      späte Antwort der älteren Abfrage den Fehler eines gescheiterten Stopps überdecken;
+      `DeviceStateService` führt dafür je Gerät eine laufende Nummer und übernimmt nur das
+      Ergebnis des jüngsten Vorgangs. Beide Fälle sind durch Tests abgesichert, die ohne die
+      Korrektur nachweislich fehlschlagen. Mitgenommen: `pos_control` wird ab Gen2
+      ausgewertet (wie `positioning` bei Gen1), Gen1 meldet die Kalibrierfahrt als solche,
+      und im Rollladenmodus ohne brauchbares `rollers`-Array bleibt die Typ-Info „roller"
+      erhalten.

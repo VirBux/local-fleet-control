@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { StorageService } from '../core/storage.service';
+import { switchChannels } from '../devices/saved-device';
 import type { ShellyDevice } from '../shelly/shelly.model';
 import { parseProjectData } from './project.model';
 import { PROJECT_STORAGE_KEY, ProjectService } from './project.service';
@@ -245,7 +246,7 @@ describe('ProjectService', () => {
       const { service, storage } = await setup();
       service.createProject('P');
 
-      service.addDevice(geraet, [0]);
+      service.addDevice(geraet, switchChannels(0));
 
       expect(service.devices()).toEqual([
         {
@@ -258,6 +259,7 @@ describe('ProjectService', () => {
           authEnabled: false,
           firmware: '1.0.7',
           channelIds: [0],
+          coverIds: [],
         },
       ]);
       // Der Punkt der ganzen Übung: Ein Neustart darf die Liste nicht verlieren.
@@ -267,7 +269,7 @@ describe('ProjectService', () => {
     it('ignoriert das Hinzufügen ohne aktives Projekt', async () => {
       const { service } = await setup();
 
-      service.addDevice(geraet, [0]);
+      service.addDevice(geraet, switchChannels(0));
 
       expect(service.devices()).toEqual([]);
     });
@@ -275,9 +277,9 @@ describe('ProjectService', () => {
     it('frischt ein bereits aufgenommenes Gerät auf, statt es zu verdoppeln', async () => {
       const { service } = await setup();
       service.createProject('P');
-      service.addDevice(geraet, [0]);
+      service.addDevice(geraet, switchChannels(0));
 
-      service.addDevice({ ...geraet, ip: '192.168.1.99' }, [0, 1]);
+      service.addDevice({ ...geraet, ip: '192.168.1.99' }, switchChannels(0, 1));
 
       expect(service.devices()).toHaveLength(1);
       expect(service.devices()[0].ip).toBe('192.168.1.99');
@@ -287,10 +289,10 @@ describe('ProjectService', () => {
     it('zieht beim Wiederfinden die neue IP nach', async () => {
       const { service } = await setup();
       service.createProject('P');
-      service.addDevice(geraet, [0]);
+      service.addDevice(geraet, switchChannels(0));
 
       // Dasselbe Gerät nach einem DHCP-Wechsel: gleiche MAC, andere Adresse.
-      service.syncDevice({ ...geraet, ip: '192.168.1.99' }, [0]);
+      service.syncDevice({ ...geraet, ip: '192.168.1.99' }, switchChannels(0));
 
       expect(service.devices()[0].ip).toBe('192.168.1.99');
     });
@@ -298,10 +300,10 @@ describe('ProjectService', () => {
     it('schreibt nicht, wenn sich nichts geändert hat', async () => {
       const { service, storage } = await setup();
       service.createProject('P');
-      service.addDevice(geraet, [0]);
+      service.addDevice(geraet, switchChannels(0));
       const vorher = storage.schreibzugriffe();
 
-      service.syncDevice(geraet, [0]);
+      service.syncDevice(geraet, switchChannels(0));
 
       // Sonst legte jede Statusabfrage die Datei neu an – bei 20 Geräten im Sekundentakt.
       expect(storage.schreibzugriffe()).toBe(vorher);
@@ -310,7 +312,7 @@ describe('ProjectService', () => {
     it('behält die gespeicherten Kanäle, solange keine Statusantwort vorliegt', async () => {
       const { service } = await setup();
       service.createProject('P');
-      service.addDevice(geraet, [0, 1]);
+      service.addDevice(geraet, switchChannels(0, 1));
 
       // `null` heißt „noch nichts gehört" – nicht „keine Kanäle".
       service.syncDevice(geraet, null);
@@ -322,7 +324,7 @@ describe('ProjectService', () => {
       const { service } = await setup();
       service.createProject('P');
 
-      service.syncDevice(geraet, [0]);
+      service.syncDevice(geraet, switchChannels(0));
 
       expect(service.devices()).toEqual([]);
     });
@@ -330,7 +332,7 @@ describe('ProjectService', () => {
     it('entfernt ein Gerät samt seiner Zuordnungen', async () => {
       const { service } = await setup();
       service.createProject('P');
-      service.addDevice(geraet, [0, 1]);
+      service.addDevice(geraet, switchChannels(0, 1));
       service.assign(`${geraet.mac}:0`, { name: 'Deckenlampe' });
       service.assign(`${geraet.mac}:1`, { name: 'Terrasse' });
       service.assign('BB:0', { name: 'Anderes Gerät' });
@@ -347,7 +349,7 @@ describe('ProjectService', () => {
     it('hält die Geräte der Projekte auseinander', async () => {
       const { service } = await setup();
       service.createProject('Kunde A');
-      service.addDevice(geraet, [0]);
+      service.addDevice(geraet, switchChannels(0));
 
       service.createProject('Kunde B');
 

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlatformService } from '../core/platform.service';
 import { StorageService } from '../core/storage.service';
+import { switchChannels } from '../devices/saved-device';
 import { ProjectService } from '../project/project.service';
 import { ControlService, DeviceError } from '../shelly/control.service';
 import { DiscoveryService } from '../shelly/discovery.service';
@@ -9,6 +10,7 @@ import type { ShellyDevice } from '../shelly/shelly.model';
 import {
   FakeStorage,
   einKanalAus,
+  einRollladen,
   fakePlatform,
   geraet,
   netz,
@@ -34,6 +36,7 @@ function setup(
   const control = {
     getStatus: vi.fn(() => Promise.resolve(einKanalAus)),
     setSwitch: vi.fn(() => Promise.resolve()),
+    setCover: vi.fn(() => Promise.resolve()),
     ...controlOverrides,
   };
 
@@ -220,6 +223,7 @@ describe('DiscoveryPageComponent', () => {
               { id: 0, on: false },
               { id: 1, on: true },
             ],
+            covers: [],
             unsupported: [],
           }),
       });
@@ -241,7 +245,7 @@ describe('DiscoveryPageComponent', () => {
       const getStatus = vi
         .fn(() => Promise.resolve(einKanalAus))
         .mockResolvedValueOnce(einKanalAus)
-        .mockResolvedValue({ channels: [{ id: 0, on: true }], unsupported: [] });
+        .mockResolvedValue({ channels: [{ id: 0, on: true }], covers: [], unsupported: [] });
 
       const { fixture } = setup(scanFindet(geraet), { getStatus, setSwitch });
       await fixture.whenStable();
@@ -328,7 +332,7 @@ describe('DiscoveryPageComponent', () => {
     it('nennt bei einem Gerät ohne Schaltausgang den erkannten Typ', async () => {
       const { fixture } = setup(scanFindet(geraet), {
         // PM Mini Gen3: misst nur, hat keinen Schaltausgang.
-        getStatus: () => Promise.resolve({ channels: [], unsupported: ['pm1'] }),
+        getStatus: () => Promise.resolve({ channels: [], covers: [], unsupported: ['pm1'] }),
       });
       await fixture.whenStable();
 
@@ -378,6 +382,24 @@ describe('DiscoveryPageComponent', () => {
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Im Projekt');
     });
 
+    it('nimmt einen gefundenen Rollladen als Rollladen ins Projekt auf', async () => {
+      const { fixture, projects } = setup(scanFindet(geraet), {
+        getStatus: () => Promise.resolve(einRollladen),
+      });
+      projects.createProject('Musterkunde');
+      await fixture.whenStable();
+      await fixture.componentInstance.scan();
+      await fixture.whenStable();
+
+      fixture.componentInstance.addToProject(fixture.componentInstance.rows()[0]);
+      await fixture.whenStable();
+
+      expect(projects.devices()[0].coverIds).toEqual([0]);
+      expect(projects.devices()[0].channelIds).toEqual([]);
+      // Beim Einrichten ist Fahren der schnellste Weg herauszufinden, welcher Rollladen das ist.
+      expect(fixture.componentInstance.rows()[0].channelType).toBe('cover');
+    });
+
     it('lässt ohne aktives Projekt nichts hinzufügen und sagt warum', async () => {
       const { fixture } = await mitFund();
 
@@ -392,7 +414,7 @@ describe('DiscoveryPageComponent', () => {
       const { fixture, projects } = await mitFund();
       projects.createProject('Musterkunde');
       projects.addRoom('Flur');
-      projects.addDevice(geraet, [0]);
+      projects.addDevice(geraet, switchChannels(0));
       projects.assign(`${geraet.mac}:0`, {
         name: 'Deckenlampe',
         roomId: projects.activeProject()!.rooms[0].id,
@@ -416,6 +438,7 @@ describe('DiscoveryPageComponent', () => {
               { id: 0, on: false },
               { id: 1, on: false },
             ],
+            covers: [],
             unsupported: [],
           }),
       });
@@ -437,7 +460,7 @@ describe('DiscoveryPageComponent', () => {
       const umgezogen = { ...geraet, ip: '192.168.1.99' };
       const { fixture, projects } = setup(scanFindet(umgezogen));
       projects.createProject('Musterkunde');
-      projects.addDevice(geraet, [0]);
+      projects.addDevice(geraet, switchChannels(0));
       await fixture.whenStable();
 
       await fixture.componentInstance.scan();

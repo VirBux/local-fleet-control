@@ -10,7 +10,9 @@
 import type { MessageKey, MessageParams } from '../i18n/messages';
 import { displayName, entityKey, type Assignment, type Project } from '../project/project.model';
 import type { ShellyDevice } from '../shelly/shelly.model';
+import type { ShellyCover } from '../shelly/status.model';
 import type { DeviceFailure, DeviceState } from './device-state.service';
+import type { DeviceChannels } from './saved-device';
 import { deviceKind, devicePhoto, vendorById, type DeviceKind, type Vendor } from './vendor';
 
 /** Fehlercode zu Textschlüssel. Als Tabelle, damit der Compiler die Lücken findet. */
@@ -31,10 +33,17 @@ export interface DeviceRow {
   /** MAC bzw. MAC:Kanal – zugleich Schlüssel für `track` und für die Projekt-Zuordnung. */
   entityKey: string;
   device: ShellyDevice;
-  /** Kanalnummer, oder `null` bei einem Gerät ohne schaltbaren Ausgang. */
+  /** Kanalnummer, oder `null` bei einem Gerät ohne bedienbaren Ausgang. */
   channelId: number | null;
-  /** Ist-Zustand laut Gerät; `null`, solange keiner bestätigt ist (kein Raten). */
+  /**
+   * Was an diesem Kanal hängt – bestimmt die Knöpfe. Steht auch dann fest, wenn der
+   * Zustand noch nicht bestätigt ist: Er kommt aus dem Projekt (REQUIREMENTS §4.4).
+   */
+  channelType: 'switch' | 'cover' | null;
+  /** Ist-Zustand eines Relais laut Gerät; `null`, solange keiner bestätigt ist (kein Raten). */
   on: boolean | null;
+  /** Ist-Zustand eines Rollladens laut Gerät; `null`, solange keiner bestätigt ist. */
+  cover: ShellyCover | null;
   state: DeviceState;
   /** Leer bei Einkanalgeräten – dort wäre „Kanal 1" nur Ballast. */
   channelLabel: string;
@@ -66,7 +75,7 @@ export interface RowContext {
    * Kanäle aus dem Projekt, solange das Gerät noch keinen Status gemeldet hat. Ohne sie
    * stünde die gespeicherte Liste beim Start ohne Schaltflächen da (REQUIREMENTS §4.4).
    */
-  savedChannels?: (mac: string) => number[];
+  savedChannels?: (mac: string) => DeviceChannels;
   /** Hersteller-ID aus dem gespeicherten Eintrag; ohne Angabe gilt Shelly. */
   vendorId?: (mac: string) => string;
   /** Steht das Gerät im Projekt? Auf der Projektseite immer `true`. */
@@ -84,19 +93,31 @@ export function buildRows(devices: ShellyDevice[], ctx: RowContext): DeviceRow[]
 
     // Bestätigte Kanäle haben Vorrang; die gespeicherten überbrücken nur die Zeit bis zur
     // ersten Antwort. Ihr Zustand bleibt derweil `null` – geraten wird nichts.
-    const confirmed = state.status?.channels ?? null;
-    const channelIds = confirmed
-      ? confirmed.map((channel) => channel.id)
-      : (ctx.savedChannels?.(device.mac) ?? []);
+    const status = state.status;
+    const known = ctx.savedChannels?.(device.mac);
+    const switchIds = status ? status.channels.map((c) => c.id) : (known?.switchIds ?? []);
+    const coverIds = status ? status.covers.map((c) => c.id) : (known?.coverIds ?? []);
 
-    const toRow = (channelId: number | null, channelLabel: string): DeviceRow => {
-      const key = entityKey(device.mac, channelId);
+    const toRow = (
+      channelId: number | null,
+      channelType: 'switch' | 'cover' | null,
+      channelLabel: string,
+    ): DeviceRow => {
+      const key = entityKey(device.mac, channelId, channelType ?? 'switch');
       const assignment = project?.assignments[key] ?? null;
       return {
         entityKey: key,
         device,
         channelId,
-        on: confirmed?.find((channel) => channel.id === channelId)?.on ?? null,
+        channelType,
+        on:
+          channelType === 'switch'
+            ? (status?.channels.find((channel) => channel.id === channelId)?.on ?? null)
+            : null,
+        cover:
+          channelType === 'cover'
+            ? (status?.covers.find((cover) => cover.id === channelId) ?? null)
+            : null,
         state,
         channelLabel,
         label: displayName(
@@ -116,13 +137,20 @@ export function buildRows(devices: ShellyDevice[], ctx: RowContext): DeviceRow[]
       };
     };
 
-    if (channelIds.length === 0) {
-      return [toRow(null, '')];
+    if (switchIds.length + coverIds.length === 0) {
+      return [toRow(null, null, '')];
     }
-    // Für Menschen ab 1 zählen; die Kanalnummer der API beginnt bei 0.
-    return channelIds.map((id) =>
-      toRow(id, channelIds.length > 1 ? ctx.t('device.channel', { number: id + 1 }) : ''),
-    );
+
+    // Die Kanalnummer steht nur dran, wenn es mehr als eine gibt – bei einem Einkanalgerät
+    // wäre „Kanal 1" nur Ballast. Für Menschen ab 1 zählen; die API beginnt bei 0.
+    const numbered = switchIds.length + coverIds.length > 1;
+    const label = (id: number): string =>
+      numbered ? ctx.t('device.channel', { number: id + 1 }) : '';
+
+    return [
+      ...switchIds.map((id) => toRow(id, 'switch', label(id))),
+      ...coverIds.map((id) => toRow(id, 'cover', label(id))),
+    ];
   });
 }
 

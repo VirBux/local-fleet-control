@@ -74,6 +74,20 @@ export const de = {
   'device.turnOn': 'Ein',
   'device.turnOff': 'Aus',
   'device.toggle': 'Umschalten',
+  'device.openCover': 'Auf',
+  'device.closeCover': 'Zu',
+  'device.stopCover': 'Stopp',
+
+  // Zustand eines Rollladens. „Öffnet"/„Schließt" beschreiben eine laufende Fahrt.
+  'cover.open': 'Offen',
+  'cover.closed': 'Geschlossen',
+  'cover.opening': 'Öffnet …',
+  'cover.closing': 'Schließt …',
+  'cover.stopped': 'Angehalten',
+  'cover.calibrating': 'Kalibriert …',
+  'cover.unknown': 'Unbekannt',
+  'cover.position': '{position} %',
+
   'device.loading': 'Status wird abgefragt …',
   'device.retry': 'Erneut versuchen',
   'device.unsupported': 'Erkannt, nicht steuerbar',

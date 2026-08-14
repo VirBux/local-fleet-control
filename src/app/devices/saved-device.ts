@@ -10,7 +10,37 @@
  */
 
 import type { ShellyDevice } from '../shelly/shelly.model';
+import type { DeviceStatus } from '../shelly/status.model';
 import { SHELLY } from './vendor';
+
+/**
+ * Die Kanäle eines Geräts, nach Art getrennt.
+ *
+ * Relais und Rollläden liegen auseinander, weil sie verschieden bedient werden und ihre
+ * Nummern beide bei 0 beginnen (docs/plans/rollladen.md).
+ */
+export interface DeviceChannels {
+  switchIds: number[];
+  coverIds: number[];
+}
+
+/** Kanäle, wie das Gerät sie gemeldet hat. */
+export function channelsFromStatus(status: DeviceStatus): DeviceChannels {
+  return {
+    switchIds: status.channels.map((channel) => channel.id),
+    coverIds: status.covers.map((cover) => cover.id),
+  };
+}
+
+/** Nur Relais – der häufige Fall, und die Abkürzung für Aufrufer ohne Rollladen. */
+export function switchChannels(...switchIds: number[]): DeviceChannels {
+  return { switchIds, coverIds: [] };
+}
+
+/** Noch nichts bekannt – etwa bei einem Gerät, das auf die Statusabfrage nicht antwortet. */
+export function emptyChannels(): DeviceChannels {
+  return { switchIds: [], coverIds: [] };
+}
 
 export interface SavedDevice {
   /** Schlüssel des Eintrags — der einzige stabile Bezeichner (REQUIREMENTS §4.4). */
@@ -25,14 +55,21 @@ export interface SavedDevice {
   authEnabled: boolean;
   firmware: string | null;
   /**
-   * Zuletzt bekannte Kanäle. Ohne sie stünde die Liste beim Start ohne Schaltflächen da,
-   * bis die erste Statusabfrage durch ist — in einer Notfall-App die längsten Sekunden.
+   * Zuletzt bekannte Relais-Kanäle. Ohne sie stünde die Liste beim Start ohne
+   * Schaltflächen da, bis die erste Statusabfrage durch ist — in einer Notfall-App die
+   * längsten Sekunden.
    */
   channelIds: number[];
+  /**
+   * Zuletzt bekannte Rollladen-Kanäle. Eigenes Feld statt gemeinsamer Liste: Eine ältere
+   * Version liest die Datei weiter (unbekanntes Feld), eine ältere Datei diese Version
+   * (fehlendes Feld → leer).
+   */
+  coverIds: number[];
 }
 
 /** Ein gefundenes Gerät, wie es ins Projekt wandert. */
-export function savedDeviceFrom(device: ShellyDevice, channelIds: number[]): SavedDevice {
+export function savedDeviceFrom(device: ShellyDevice, channels: DeviceChannels): SavedDevice {
   return {
     mac: device.mac,
     ip: device.ip,
@@ -42,7 +79,8 @@ export function savedDeviceFrom(device: ShellyDevice, channelIds: number[]): Sav
     name: device.name,
     authEnabled: device.authEnabled,
     firmware: device.firmware,
-    channelIds: [...channelIds],
+    channelIds: [...channels.switchIds],
+    coverIds: [...channels.coverIds],
   };
 }
 
@@ -102,6 +140,7 @@ export function parseSavedDevices(value: unknown): SavedDevice[] {
         authEnabled: raw['authEnabled'] === true,
         firmware: asString(raw['firmware']),
         channelIds: parseChannelIds(raw['channelIds']),
+        coverIds: parseChannelIds(raw['coverIds']),
       },
     ];
   });

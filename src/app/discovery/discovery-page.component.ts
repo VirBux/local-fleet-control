@@ -17,7 +17,8 @@ import {
   type ScanRange,
   type ShellyDevice,
 } from '../shelly/shelly.model';
-import type { SwitchAction } from '../shelly/status.model';
+import type { CoverAction, SwitchAction } from '../shelly/status.model';
+import { channelsFromStatus, emptyChannels, type DeviceChannels } from '../devices/saved-device';
 
 /** Ein anklickbarer Vorschlag aus den lokalen Netzen dieses Rechners. */
 export interface RangePreset {
@@ -231,15 +232,21 @@ export class DiscoveryPageComponent {
     }
   }
 
+  moveCover(row: DeviceRow, action: CoverAction): void {
+    if (row.channelId !== null) {
+      void this.deviceStates.moveCover(row.device, row.channelId, action);
+    }
+  }
+
   /** Nimmt das Gerät der Zeile ins aktive Projekt auf – mit allen bekannten Kanälen. */
   addToProject(row: DeviceRow): void {
-    this.projects.addDevice(row.device, this.channelsOf(row.device.mac) ?? []);
+    this.projects.addDevice(row.device, this.channelsOf(row.device.mac) ?? emptyChannels());
   }
 
   /** Bestätigte Kanäle eines Geräts; `null`, solange keine Statusantwort vorliegt. */
-  private channelsOf(mac: string): number[] | null {
+  private channelsOf(mac: string): DeviceChannels | null {
     const status = this.deviceStates.stateFor(mac).status;
-    return status ? status.channels.map((channel) => channel.id) : null;
+    return status ? channelsFromStatus(status) : null;
   }
 
   format(range: ScanRange): string {

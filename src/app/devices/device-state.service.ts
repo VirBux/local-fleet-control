@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ControlService, DeviceError, type DeviceErrorCode } from '../shelly/control.service';
 import type { ShellyDevice } from '../shelly/shelly.model';
-import type { DeviceStatus, SwitchAction } from '../shelly/status.model';
+import type { CoverAction, DeviceStatus, SwitchAction } from '../shelly/status.model';
 
 /**
  * Fehler eines Geräts – als Code, übersetzt wird erst beim Anzeigen (REQUIREMENTS §4.6).
@@ -45,6 +45,17 @@ export class DeviceStateService {
   /** Lesbarer Zustand für die Ansichten; ändert sich, sobald irgendein Gerät antwortet. */
   readonly all = this.states.asReadonly();
 
+  /**
+   * Laufende Nummer des jüngsten Vorgangs je Gerät.
+   *
+   * Zwei Vorgänge können gleichzeitig offen sein — „Stopp" darf während der Statusabfrage
+   * nach einem Fahrbefehl durch (siehe `moveCover`). Ohne diese Nummer überschriebe die
+   * spät eintreffende Antwort des älteren Vorgangs das Ergebnis des jüngeren: Ein
+   * gescheiterter Stopp verschwände hinter einem „alles in Ordnung", das sich auf den
+   * Zustand *vor* dem Stopp bezieht.
+   */
+  private readonly latest = new Map<string, number>();
+
   /** Bekannter Zustand eines Geräts; unbekannt heißt „Abfrage läuft". */
   stateFor(mac: string): DeviceState {
     return this.states().get(mac) ?? PENDING;
@@ -55,6 +66,8 @@ export class DeviceStateService {
    * die Liste muss auch dann brauchbar bleiben, wenn eines nicht antwortet.
    */
   async loadStatus(device: ShellyDevice): Promise<void> {
+    const vorgang = this.begin(device.mac);
+
     if (device.authEnabled) {
       // Ohne Geräte-Auth (REQUIREMENTS §4.3, eigener Schritt) käme nur ein 401 zurück.
       // Den Grund zeigen, statt das Gerät als „Fehler" abzustempeln.
@@ -73,9 +86,9 @@ export class DeviceStateService {
     this.set(device.mac, { ...this.stateFor(device.mac), busy: true, error: null });
     try {
       const status = await this.control.getStatus(device);
-      this.set(device.mac, { status, busy: false, error: null, locked: false });
+      this.settle(device.mac, vorgang, { status, busy: false, error: null, locked: false });
     } catch (cause) {
-      this.set(device.mac, failureFor(cause));
+      this.settle(device.mac, vorgang, failureFor(cause));
     }
   }
 
@@ -89,15 +102,56 @@ export class DeviceStateService {
     if (state.busy || state.locked) {
       return;
     }
+    await this.command(device, () => this.control.setSwitch(device, channelId, action));
+  }
 
-    this.set(device.mac, { ...state, busy: true, error: null });
-    try {
-      await this.control.setSwitch(device, channelId, action);
-    } catch (cause) {
-      this.set(device.mac, failureFor(cause));
+  /**
+   * Fährt einen Rollladen und fragt danach den echten Zustand neu ab.
+   *
+   * **Stopp geht auch, während eine Abfrage läuft.** Genau dann fährt der Rollladen ja –
+   * die Statusabfrage nach dem Fahrbefehl läuft noch. Wäre der Knopf so lange gesperrt,
+   * fehlte er ausgerechnet in dem Moment, für den er da ist.
+   */
+  async moveCover(device: ShellyDevice, coverId: number, action: CoverAction): Promise<void> {
+    const state = this.stateFor(device.mac);
+    if (state.locked || (state.busy && action !== 'stop')) {
       return;
     }
+    await this.command(device, () => this.control.setCover(device, coverId, action));
+  }
+
+  /** Befehl abschicken, Fehler am Gerät festhalten, danach den Ist-Zustand nachfragen. */
+  private async command(device: ShellyDevice, send: () => Promise<void>): Promise<void> {
+    const vorgang = this.begin(device.mac);
+
+    this.set(device.mac, { ...this.stateFor(device.mac), busy: true, error: null });
+    try {
+      await send();
+    } catch (cause) {
+      this.settle(device.mac, vorgang, failureFor(cause));
+      return;
+    }
+    // `loadStatus` beginnt seinen eigenen Vorgang – dieser hier ist damit abgeschlossen.
     await this.loadStatus(device);
+  }
+
+  /** Meldet einen neuen Vorgang an; alle älteren gelten damit als überholt. */
+  private begin(mac: string): number {
+    const vorgang = (this.latest.get(mac) ?? 0) + 1;
+    this.latest.set(mac, vorgang);
+    return vorgang;
+  }
+
+  /**
+   * Ergebnis eines Vorgangs übernehmen – aber nur, wenn ihn keiner überholt hat.
+   *
+   * Sonst räumte die späte Antwort auf einen älteren Befehl den Fehler des jüngeren weg,
+   * oder zeigte einen Zustand von vor dem letzten Befehl als aktuell an.
+   */
+  private settle(mac: string, vorgang: number, state: DeviceState): void {
+    if (this.latest.get(mac) === vorgang) {
+      this.set(mac, state);
+    }
   }
 
   private set(mac: string, state: DeviceState): void {

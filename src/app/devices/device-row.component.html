@@ -35,7 +35,7 @@
 </div>
 
 <div class="cell status">
-  @if (row().channelId !== null) {
+  @if (row().channelType === 'switch') {
     <span class="channel-state" [class.on]="row().on === true">
       @if (row().on === null) {
         —
@@ -52,12 +52,30 @@
     <button type="button" [disabled]="!canSwitch()" (click)="switchAction.emit('toggle')">
       {{ t('device.toggle') }}
     </button>
-    @if (row().state.error) {
-      <span class="device-hint error">
-        {{ row().errorText }}
-        <button type="button" class="retry" (click)="retry.emit()">{{ t('device.retry') }}</button>
-      </span>
-    }
+  } @else if (row().channelType === 'cover') {
+    <!-- Fahrtrichtung und Position, beides nur vom Gerät. „Offen" färbt wie ein
+         eingeschaltetes Relais – die Zeile soll aus dem Augenwinkel lesbar sein. -->
+    <span class="channel-state" [class.on]="row().cover?.state === 'open'">
+      @if (row().cover; as cover) {
+        {{ coverStateText() }}
+        @if (cover.position !== null) {
+          <span class="position">{{ t('cover.position', { position: cover.position }) }}</span>
+        }
+      } @else {
+        —
+      }
+    </span>
+    <button type="button" [disabled]="!canMove()" (click)="coverAction.emit('open')">
+      {{ t('device.openCover') }}
+    </button>
+    <!-- Stopp bleibt klickbar, solange das Gerät antwortet: Wenn der Rollladen fährt, läuft
+         die Statusabfrage noch – ein gesperrter Stopp fehlte genau dann. -->
+    <button type="button" [disabled]="!canStop()" (click)="coverAction.emit('stop')">
+      {{ t('device.stopCover') }}
+    </button>
+    <button type="button" [disabled]="!canMove()" (click)="coverAction.emit('close')">
+      {{ t('device.closeCover') }}
+    </button>
   } @else if (row().state.busy) {
     <span class="device-hint">{{ t('device.loading') }}</span>
   } @else if (row().state.locked) {
@@ -76,6 +94,16 @@
       } @else {
         {{ t('device.unsupported') }}
       }
+    </span>
+  }
+
+  <!-- Fehler eines bedienbaren Kanals stehen hinter den Knöpfen: Die Zeile soll bedienbar
+       bleiben, auch wenn der letzte Versuch schiefging. Kanallose Geräte zeigen ihren
+       Fehler oben, sie haben nichts anderes anzuzeigen. -->
+  @if (row().channelType !== null && row().state.error) {
+    <span class="device-hint error">
+      {{ row().errorText }}
+      <button type="button" class="retry" (click)="retry.emit()">{{ t('device.retry') }}</button>
     </span>
   }
 </div>

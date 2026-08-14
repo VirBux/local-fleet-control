@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { buildRows, type DeviceRow } from '../devices/device-row';
 import { DeviceRowComponent } from '../devices/device-row.component';
 import { DeviceStateService, PENDING } from '../devices/device-state.service';
-import { toShellyDevice } from '../devices/saved-device';
+import { channelsFromStatus, emptyChannels, toShellyDevice } from '../devices/saved-device';
 import { I18nService } from '../i18n/i18n.service';
 import type { ShellyDevice } from '../shelly/shelly.model';
-import type { SwitchAction } from '../shelly/status.model';
+import type { CoverAction, SwitchAction } from '../shelly/status.model';
 import { groupEntities, type Assignment, type GroupMode } from './project.model';
 import { ProjectService } from './project.service';
 
@@ -58,7 +58,10 @@ export class ProjectPageComponent {
       state: (mac) => states.get(mac) ?? PENDING,
       project: this.projects.activeProject(),
       t: this.t,
-      savedChannels: (mac) => devices.find((device) => device.mac === mac)?.channelIds ?? [],
+      savedChannels: (mac) => {
+        const saved = devices.find((device) => device.mac === mac);
+        return saved ? { switchIds: saved.channelIds, coverIds: saved.coverIds } : emptyChannels();
+      },
       vendorId: (mac) => devices.find((device) => device.mac === mac)?.vendorId ?? 'shelly',
       saved: () => true,
     });
@@ -105,6 +108,12 @@ export class ProjectPageComponent {
     }
   }
 
+  moveCover(row: DeviceRow, action: CoverAction): void {
+    if (row.channelId !== null) {
+      void this.deviceStates.moveCover(row.device, row.channelId, action);
+    }
+  }
+
   /**
    * Status abfragen und das Ergebnis ins Projekt zurückspiegeln: Ein Gerät, das inzwischen
    * anders heißt oder einen Kanal mehr hat, soll nicht mit alten Angaben in der Datei
@@ -113,7 +122,7 @@ export class ProjectPageComponent {
   private async refresh(device: ShellyDevice): Promise<void> {
     await this.deviceStates.loadStatus(device);
     const status = this.deviceStates.stateFor(device.mac).status;
-    this.projects.syncDevice(device, status ? status.channels.map((channel) => channel.id) : null);
+    this.projects.syncDevice(device, status ? channelsFromStatus(status) : null);
   }
 
   // --- Projektverwaltung: nimmt den Eingabefeldern die Arbeit ab, der Rest liegt im Service ---

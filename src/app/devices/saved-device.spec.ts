@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ShellyDevice } from '../shelly/shelly.model';
-import { parseSavedDevices, savedDeviceFrom, toShellyDevice } from './saved-device';
+import {
+  parseSavedDevices,
+  savedDeviceFrom,
+  switchChannels,
+  toShellyDevice,
+} from './saved-device';
 
 const geraet: ShellyDevice = {
   ip: '192.168.1.50',
@@ -14,7 +19,7 @@ const geraet: ShellyDevice = {
 
 describe('savedDeviceFrom', () => {
   it('übernimmt das gefundene Gerät samt Kanälen', () => {
-    const saved = savedDeviceFrom(geraet, [0, 1]);
+    const saved = savedDeviceFrom(geraet, switchChannels(0, 1));
 
     expect(saved).toEqual({
       mac: 'A8032ABD42EC',
@@ -26,13 +31,22 @@ describe('savedDeviceFrom', () => {
       authEnabled: false,
       firmware: '1.0.7',
       channelIds: [0, 1],
+      coverIds: [],
     });
   });
 
-  it('kopiert die Kanalliste, statt sie zu teilen', () => {
-    const kanaele = [0];
+  it('hält Rollläden von den Relais getrennt', () => {
+    // Ein Gerät im Rollladenmodus: keine einzeln schaltbaren Relais, ein Rollladen.
+    const saved = savedDeviceFrom(geraet, { switchIds: [], coverIds: [0] });
+
+    expect(saved.channelIds).toEqual([]);
+    expect(saved.coverIds).toEqual([0]);
+  });
+
+  it('kopiert die Kanallisten, statt sie zu teilen', () => {
+    const kanaele = switchChannels(0);
     const saved = savedDeviceFrom(geraet, kanaele);
-    kanaele.push(1);
+    kanaele.switchIds.push(1);
 
     expect(saved.channelIds).toEqual([0]);
   });
@@ -40,13 +54,13 @@ describe('savedDeviceFrom', () => {
 
 describe('toShellyDevice', () => {
   it('macht aus dem gespeicherten Eintrag wieder ein Ziel für Abfragen', () => {
-    expect(toShellyDevice(savedDeviceFrom(geraet, [0]))).toEqual(geraet);
+    expect(toShellyDevice(savedDeviceFrom(geraet, switchChannels(0)))).toEqual(geraet);
   });
 });
 
 describe('parseSavedDevices', () => {
   it('liest zurück, was gespeichert wurde', () => {
-    const saved = [savedDeviceFrom(geraet, [0, 1])];
+    const saved = [savedDeviceFrom(geraet, switchChannels(0, 1))];
 
     expect(parseSavedDevices(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
   });
@@ -71,15 +85,17 @@ describe('parseSavedDevices', () => {
       authEnabled: false,
       firmware: null,
       channelIds: [],
+      coverIds: [],
     });
   });
 
   it('nimmt nur brauchbare Kanalnummern', () => {
     const [device] = parseSavedDevices([
-      { mac: 'AA', ip: '1.2.3.4', generation: 2, channelIds: [0, -1, 'x', 1.5, 2] },
+      { mac: 'AA', ip: '1.2.3.4', generation: 2, channelIds: [0, -1, 'x', 1.5, 2], coverIds: [1] },
     ]);
 
     expect(device.channelIds).toEqual([0, 2]);
+    expect(device.coverIds).toEqual([1]);
   });
 
   it('liefert für alles andere eine leere Liste', () => {

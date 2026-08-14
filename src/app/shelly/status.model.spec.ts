@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ShellyDevice } from './shelly.model';
-import { parseDeviceStatus, statusUrl, switchUrl, type SwitchAction } from './status.model';
+import {
+  coverUrl,
+  parseDeviceStatus,
+  statusUrl,
+  switchUrl,
+  type CoverAction,
+  type SwitchAction,
+} from './status.model';
 
 /** Baut ein Gerät für die URL-Tests; nur `ip` und `generation` spielen dort eine Rolle. */
 function device(generation: number, ip = '192.168.1.183'): ShellyDevice {
@@ -23,7 +30,7 @@ describe('parseDeviceStatus – Gen2/3', () => {
       wifi: { sta_ip: '192.168.1.183' },
     });
 
-    expect(status).toEqual({ channels: [{ id: 0, on: true }], unsupported: [] });
+    expect(status).toEqual({ channels: [{ id: 0, on: true }], covers: [], unsupported: [] });
   });
 
   it('meldet jeden Kanal eines Mehrkanalgeräts einzeln, nach Nummer sortiert', () => {
@@ -46,13 +53,13 @@ describe('parseDeviceStatus – Gen2/3', () => {
       sys: {},
     });
 
-    expect(status).toEqual({ channels: [], unsupported: ['pm1'] });
+    expect(status).toEqual({ channels: [], covers: [], unsupported: ['pm1'] });
   });
 
   it('nennt bei einem Dimmer den Typ, statt ihn stumm zu verschlucken', () => {
     const status = parseDeviceStatus(3, { 'light:0': { id: 0, output: true, brightness: 60 } });
 
-    expect(status).toEqual({ channels: [], unsupported: ['light'] });
+    expect(status).toEqual({ channels: [], covers: [], unsupported: ['light'] });
   });
 
   it('zählt gleichartige Komponenten nur einmal auf', () => {
@@ -71,7 +78,7 @@ describe('parseDeviceStatus – Gen2/3', () => {
       'script:1': { id: 1, running: true },
     });
 
-    expect(status).toEqual({ channels: [{ id: 0, on: false }], unsupported: [] });
+    expect(status).toEqual({ channels: [{ id: 0, on: false }], covers: [], unsupported: [] });
   });
 
   it('ignoriert Infrastruktur-Schlüssel ohne Doppelpunkt', () => {
@@ -83,14 +90,62 @@ describe('parseDeviceStatus – Gen2/3', () => {
       sys: { uptime: 1234 },
     });
 
-    expect(status).toEqual({ channels: [], unsupported: [] });
+    expect(status).toEqual({ channels: [], covers: [], unsupported: [] });
+  });
+
+  it('liest einen Rollladen aus "cover:0"', () => {
+    const status = parseDeviceStatus(2, {
+      'cover:0': { id: 0, state: 'stopped', current_pos: 40, pos_control: true, apower: 0 },
+      'input:0': { id: 0, state: false },
+      sys: {},
+    });
+
+    expect(status).toEqual({
+      channels: [],
+      covers: [{ id: 0, state: 'stopped', position: 40 }],
+      unsupported: [],
+    });
+  });
+
+  it('übernimmt den gemeldeten Zustand einer laufenden Fahrt', () => {
+    const status = parseDeviceStatus(3, {
+      'cover:0': { id: 0, state: 'closing', current_pos: 62 },
+    });
+
+    expect(status?.covers).toEqual([{ id: 0, state: 'closing', position: 62 }]);
+  });
+
+  it('meldet einen unbekannten Zustand als "unknown", statt die Zeile zu verlieren', () => {
+    // Fahren lässt sich der Rollladen trotzdem – nur die Beschriftung bleibt vage.
+    const status = parseDeviceStatus(3, { 'cover:0': { id: 0, state: 'wat', current_pos: 5 } });
+
+    expect(status?.covers).toEqual([{ id: 0, state: 'unknown', position: 5 }]);
+  });
+
+  it('gibt ohne brauchbare Positionsangabe keine Zahl aus', () => {
+    // Ein nicht kalibrierter Rollladen meldet gar kein `current_pos`.
+    const status = parseDeviceStatus(3, {
+      'cover:0': { id: 0, state: 'stopped', pos_control: false },
+    });
+
+    expect(status?.covers).toEqual([{ id: 0, state: 'stopped', position: null }]);
+  });
+
+  it('verwirft die Position, wenn das Gerät die Positionierung abschaltet', () => {
+    // `pos_control: false` heißt „nicht kalibriert" – ein trotzdem mitgeliefertes
+    // `current_pos` wäre eine Zahl ohne Bedeutung. Dieselbe Regel wie bei Gen1.
+    const status = parseDeviceStatus(3, {
+      'cover:0': { id: 0, state: 'stopped', current_pos: 73, pos_control: false },
+    });
+
+    expect(status?.covers).toEqual([{ id: 0, state: 'stopped', position: null }]);
   });
 
   it('behandelt einen "switch" ohne Zustandsfeld als nicht steuerbar', () => {
     // Lieber als unbekannt melden, als einen Knopf ohne bekannten Ist-Zustand anbieten.
     const status = parseDeviceStatus(2, { 'switch:0': { id: 0 } });
 
-    expect(status).toEqual({ channels: [], unsupported: ['switch'] });
+    expect(status).toEqual({ channels: [], covers: [], unsupported: ['switch'] });
   });
 });
 
@@ -106,20 +161,97 @@ describe('parseDeviceStatus – Gen1', () => {
         { id: 0, on: false },
         { id: 1, on: true },
       ],
+      covers: [],
       unsupported: [],
     });
   });
 
-  it('schaltet im Rollladenmodus keine Relais einzeln', () => {
+  it('schaltet im Rollladenmodus keine Relais einzeln, sondern meldet den Rollladen', () => {
     // Shelly 2.5 im Rollladenmodus meldet weiterhin `relays` – die einzeln zu schalten
     // fährt den Motor an und ist kein Ein/Aus.
     const status = parseDeviceStatus(1, {
       mode: 'roller',
       relays: [{ ison: false }, { ison: false }],
-      rollers: [{ state: 'stop', current_pos: 40 }],
+      rollers: [{ state: 'stop', current_pos: 40, positioning: true }],
     });
 
-    expect(status).toEqual({ channels: [], unsupported: ['roller'] });
+    expect(status).toEqual({
+      channels: [],
+      covers: [{ id: 0, state: 'stopped', position: 40 }],
+      unsupported: [],
+    });
+  });
+
+  it('lässt den `rollers`-Eintrag im Relaismodus liegen', () => {
+    // Ein Shelly 2.5 meldet `rollers` in jedem Modus; im Relaismodus ist er Beiwerk.
+    const status = parseDeviceStatus(1, {
+      mode: 'relay',
+      relays: [{ ison: true }, { ison: false }],
+      rollers: [{ state: 'stop', current_pos: 0, positioning: true }],
+    });
+
+    expect(status?.covers).toEqual([]);
+    expect(status?.channels).toHaveLength(2);
+  });
+
+  it('leitet offen und geschlossen aus der Position ab, solange der Rollladen steht', () => {
+    // Gen1 kennt nur die Bewegung („stop") – erst die Position sagt, wo er steht.
+    const zu = parseDeviceStatus(1, {
+      mode: 'roller',
+      rollers: [{ state: 'stop', current_pos: 0, positioning: true }],
+    });
+    const auf = parseDeviceStatus(1, {
+      mode: 'roller',
+      rollers: [{ state: 'stop', current_pos: 100, positioning: true }],
+    });
+
+    expect(zu?.covers).toEqual([{ id: 0, state: 'closed', position: 0 }]);
+    expect(auf?.covers).toEqual([{ id: 0, state: 'open', position: 100 }]);
+  });
+
+  it('übersetzt die Fahrtrichtung', () => {
+    const status = parseDeviceStatus(1, {
+      mode: 'roller',
+      rollers: [{ state: 'open', current_pos: 30, positioning: true }, { state: 'close' }],
+    });
+
+    expect(status?.covers).toEqual([
+      { id: 0, state: 'opening', position: 30 },
+      { id: 1, state: 'closing', position: null },
+    ]);
+  });
+
+  it('nennt die Kalibrierfahrt beim Namen', () => {
+    // Gen1 meldet dabei weiterhin eine Bewegung; das eigene Flag ist die genauere Auskunft.
+    const status = parseDeviceStatus(1, {
+      mode: 'roller',
+      rollers: [{ state: 'open', current_pos: 50, positioning: true, calibrating: true }],
+    });
+
+    expect(status?.covers).toEqual([{ id: 0, state: 'calibrating', position: 50 }]);
+  });
+
+  it('behält die Typ-Info, wenn im Rollladenmodus nichts Brauchbares kommt', () => {
+    // Die Relais bleiben trotzdem gesperrt – dann ist der Typ das Einzige, was das Gerät
+    // noch verrät, und genau den braucht ein Issue.
+    const status = parseDeviceStatus(1, {
+      mode: 'roller',
+      relays: [{ ison: false }, { ison: false }],
+      rollers: [],
+    });
+
+    expect(status).toEqual({ channels: [], covers: [], unsupported: ['roller'] });
+  });
+
+  it('verwirft die Position eines nicht kalibrierten Rollladens', () => {
+    // Ohne Kalibrierung ist `current_pos` bedeutungslos – eine erfundene Prozentzahl wäre
+    // schlimmer als keine. Ohne Position bleibt es beim schlichten „angehalten".
+    const status = parseDeviceStatus(1, {
+      mode: 'roller',
+      rollers: [{ state: 'stop', current_pos: 0, positioning: false }],
+    });
+
+    expect(status?.covers).toEqual([{ id: 0, state: 'stopped', position: null }]);
   });
 
   it('nennt Licht und Energiemessung als erkannte, nicht steuerbare Typen', () => {
@@ -128,7 +260,7 @@ describe('parseDeviceStatus – Gen1', () => {
       emeters: [{ power: 120.5 }],
     });
 
-    expect(status).toEqual({ channels: [], unsupported: ['emeter', 'light'] });
+    expect(status).toEqual({ channels: [], covers: [], unsupported: ['emeter', 'light'] });
   });
 });
 
@@ -143,7 +275,7 @@ describe('parseDeviceStatus – unbrauchbare Antworten', () => {
   });
 
   it('nimmt ein leeres Objekt an – ein Gerät ohne Komponenten ist kein Fehler', () => {
-    expect(parseDeviceStatus(2, {})).toEqual({ channels: [], unsupported: [] });
+    expect(parseDeviceStatus(2, {})).toEqual({ channels: [], covers: [], unsupported: [] });
   });
 });
 
@@ -179,5 +311,27 @@ describe('switchUrl', () => {
 
   it.each(gen2)('Gen2, Kanal 0, %s', (action, erwartet) => {
     expect(switchUrl(device(2), 0, action)).toBe(erwartet);
+  });
+});
+
+describe('coverUrl', () => {
+  const gen1: [CoverAction, string][] = [
+    ['open', 'http://192.168.1.50/roller/0?go=open'],
+    ['close', 'http://192.168.1.50/roller/0?go=close'],
+    ['stop', 'http://192.168.1.50/roller/0?go=stop'],
+  ];
+
+  it.each(gen1)('Gen1, Rollladen 0, %s', (action, erwartet) => {
+    expect(coverUrl(device(1, '192.168.1.50'), 0, action)).toBe(erwartet);
+  });
+
+  const gen2: [CoverAction, string][] = [
+    ['open', 'http://192.168.1.183/rpc/Cover.Open?id=1'],
+    ['close', 'http://192.168.1.183/rpc/Cover.Close?id=1'],
+    ['stop', 'http://192.168.1.183/rpc/Cover.Stop?id=1'],
+  ];
+
+  it.each(gen2)('Gen2, Rollladen 1, %s', (action, erwartet) => {
+    expect(coverUrl(device(2), 1, action)).toBe(erwartet);
   });
 });

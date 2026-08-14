@@ -1,8 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import type { MessageKey } from '../i18n/messages';
 import { I18nService } from '../i18n/i18n.service';
-import type { SwitchAction } from '../shelly/status.model';
+import type { CoverAction, CoverState, SwitchAction } from '../shelly/status.model';
 import { DeviceImageComponent } from './device-image.component';
 import type { DeviceRow } from './device-row';
+
+/** Rollladen-Zustand zu Textschlüssel. Als Tabelle, damit der Compiler die Lücken findet. */
+const COVER_STATE_KEYS: Record<CoverState, MessageKey> = {
+  open: 'cover.open',
+  closed: 'cover.closed',
+  opening: 'cover.opening',
+  closing: 'cover.closing',
+  stopped: 'cover.stopped',
+  calibrating: 'cover.calibrating',
+  unknown: 'cover.unknown',
+};
 
 /**
  * Eine Zeile der Geräteliste, für beide Seiten dieselbe.
@@ -29,6 +41,7 @@ export class DeviceRowComponent {
   readonly row = input.required<DeviceRow>();
 
   readonly switchAction = output<SwitchAction>();
+  readonly coverAction = output<CoverAction>();
   readonly retry = output<void>();
 
   /** Typ-Info hinter „erkannt, nicht steuerbar" – leer, wenn das Gerät nichts meldet. */
@@ -42,5 +55,29 @@ export class DeviceRowComponent {
   readonly canSwitch = computed(() => {
     const { state, on } = this.row();
     return !state.busy && !state.locked && on !== null;
+  });
+
+  /** Dasselbe für Öffnen und Schließen. */
+  readonly canMove = computed(() => {
+    const { state, cover } = this.row();
+    return !state.busy && !state.locked && cover !== null;
+  });
+
+  /**
+   * Stopp bleibt klickbar, solange das Gerät nicht gesperrt ist – auch während einer
+   * laufenden Abfrage und **auch nach einem Fehlschlag**. Genau dann fährt der Rollladen:
+   * Ein Timeout während der Motorfahrt wirft den bestätigten Zustand weg, aber die
+   * Rollladennummer steht trotzdem fest (sie kommt aus dem Projekt). Anders als Auf und Zu
+   * setzt Stopp keinen gelesenen Zustand voraus – er ist nie geraten.
+   */
+  readonly canStop = computed(() => {
+    const { state, channelType } = this.row();
+    return !state.locked && channelType === 'cover';
+  });
+
+  /** Zustand des Rollladens in der eingestellten Sprache; leer, solange keiner feststeht. */
+  readonly coverStateText = computed(() => {
+    const cover = this.row().cover;
+    return cover ? this.t(COVER_STATE_KEYS[cover.state]) : '';
   });
 }

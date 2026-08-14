@@ -57,7 +57,12 @@ eigene Namen, gruppierte Liste.
 ## 5. Iterativ danach (Reihenfolge gemeinsam festlegen)
 
 - [ ] Licht/Dimmer
-- [ ] Rollladen
+- [ ] **Rollladen am echten Gerät gegentesten** — gebaut
+      ([Plan](./plans/rollladen.md)), aber im Testnetz hängt keiner. Zum Nachholen, sobald
+      ein Shelly 2PM (Gen2/3) oder 2.5 (Gen1) im Rollladenmodus da ist: Abschnitt 4b in
+      [TESTPLAN.md](./TESTPLAN.md)
+- [ ] Zielposition anfahren (`Cover.GoToPosition` bzw. `go=to_pos`) — Komfort über §4.2
+      hinaus, deshalb bewusst zurückgestellt
 - [ ] Geräte-Auth (Gen1 Basic, Gen2/3 Digest SHA-256)
 - [ ] Persistenz der Credentials (Geräteliste und Namen: siehe §4)
 - [ ] Update-Check gegen GitHub-Releases-API

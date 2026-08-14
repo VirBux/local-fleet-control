@@ -45,7 +45,18 @@ export const zweitgeraet: ShellyDevice = {
   name: 'Terrasse',
 };
 
-export const einKanalAus: DeviceStatus = { channels: [{ id: 0, on: false }], unsupported: [] };
+export const einKanalAus: DeviceStatus = {
+  channels: [{ id: 0, on: false }],
+  covers: [],
+  unsupported: [],
+};
+
+/** Ein Gerät im Rollladenmodus: ein Rollladen, kein einzeln schaltbares Relais. */
+export const einRollladen: DeviceStatus = {
+  channels: [],
+  covers: [{ id: 0, state: 'stopped', position: 40 }],
+  unsupported: [],
+};
 
 /** Speicher-Double. Asynchron wie das Original: Die echte Ablage ist eine Datei. */
 export class FakeStorage {

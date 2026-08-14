@@ -75,9 +75,16 @@ export function emptyAssignment(): Assignment {
  * Zugeordnet wird nicht das Gerät, sondern der einzelne Kanal: Ein Shelly 2PM kann Kanal 0
  * im Flur und Kanal 1 im Bad haben. Geräte ohne schaltbaren Ausgang (Messgeräte, noch nicht
  * unterstützte Typen) bekommen die MAC allein.
+ *
+ * Ein Rollladen bekommt `MAC:cover:<id>`, weil Relais- und Rollladennummern beide bei 0
+ * beginnen (docs/plans/rollladen.md). Am Schlüssel hängen Raum, Kategorie und eigener
+ * Name — dort auf „das kommt bei Shelly nicht zusammen vor" zu bauen, wäre der falsche Ort.
  */
-export function entityKey(mac: string, channelId: number | null): string {
-  return channelId === null ? mac : `${mac}:${channelId}`;
+export function entityKey(mac: string, channelId: number | null, kind: 'switch' | 'cover' = 'switch'): string {
+  if (channelId === null) {
+    return mac;
+  }
+  return kind === 'cover' ? `${mac}:cover:${channelId}` : `${mac}:${channelId}`;
 }
 
 /**

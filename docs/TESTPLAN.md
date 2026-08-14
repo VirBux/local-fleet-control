@@ -100,6 +100,27 @@ handleError	@	root_effect_scheduler.mjs:3637
 - [ ] Ein passwortgeschütztes Gerät (falls eines eingerichtet werden kann) zeigt 🔒 und
       „Passwortgeschützt — Anmeldung ist noch nicht gebaut", statt einen Fehler zu melden
 
+## 4b. Rollladen (gebaut, mangels Gerät noch ungeprüft)
+
+> Braucht einen Shelly im Rollladenmodus — 2PM/Plus 2PM/Pro 2PM (Gen2/3) oder 2.5 (Gen1).
+> Solange keiner da ist, bleibt dieser Block offen. Plan: [rollladen.md](./plans/rollladen.md).
+
+- [ ] Das Gerät steht mit **einem** Eintrag in der Liste (nicht mit zwei Relais-Kanälen)
+- [ ] Die Zeile zeigt **Auf**, **Stopp**, **Zu** statt Ein/Aus/Umschalten
+- [ ] **Auf** und **Zu** fahren den Rollladen wirklich
+- [ ] **Stopp** hält ihn mitten in der Fahrt an — auch während die Anzeige noch „Öffnet …"
+      bzw. „Schließt …" meldet, also während einer laufenden Abfrage
+- [ ] **WLAN während der Fahrt kurz stören** (Gerät vom Netz trennen oder Router-Funk aus):
+      Die Zeile zeigt einen Fehler und „—", **Stopp bleibt trotzdem klickbar**; nach dem
+      Zurückkommen hält er den Rollladen an
+- [ ] Der angezeigte Zustand folgt dem Gerät: „Öffnet …" / „Schließt …" während der Fahrt,
+      danach „Offen" (100 %), „Geschlossen" (0 %) oder „Angehalten" mit Position
+- [ ] Am Rollladen selbst (Wandtaster) fahren, dann „Erneut versuchen" → die Anzeige stimmt
+- [ ] Ein **nicht kalibrierter** Rollladen zeigt keine Prozentzahl, lässt sich aber fahren
+- [ ] Raum, Kategorie und eigener Name lassen sich zuordnen und überleben einen Neustart
+- [ ] Gen1 (Shelly 2.5): im **Relaismodus** erscheinen zwei schaltbare Kanäle, nach Umstellung
+      auf **Rollladenmodus** ein Rollladen
+
 ## 5. Projektstruktur
 
 - [ ] Projekt anlegen → es wird sofort das aktive

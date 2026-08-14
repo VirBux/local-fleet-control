@@ -2,9 +2,11 @@ import { Injectable } from '@angular/core';
 import { fetch } from '@tauri-apps/plugin-http';
 import type { ShellyDevice } from './shelly.model';
 import {
+  coverUrl,
   parseDeviceStatus,
   statusUrl,
   switchUrl,
+  type CoverAction,
   type DeviceStatus,
   type SwitchAction,
 } from './status.model';
@@ -93,6 +95,16 @@ export class ControlService {
    */
   async setSwitch(device: ShellyDevice, channelId: number, action: SwitchAction): Promise<void> {
     await this.send(switchUrl(device, channelId, action));
+  }
+
+  /**
+   * Fährt einen Rollladen. Wirft `DeviceError`, wenn der Befehl nicht ankommt.
+   *
+   * Die Antwort wird wie beim Relais verworfen: Sie bestätigt nur die Annahme des Befehls,
+   * nicht das Ergebnis der Fahrt. Maßgeblich ist die Nachfrage.
+   */
+  async setCover(device: ShellyDevice, coverId: number, action: CoverAction): Promise<void> {
+    await this.send(coverUrl(device, coverId, action));
   }
 
   /** Eine Anfrage an ein bekanntes Gerät; übersetzt jeden Fehlschlag in `DeviceError`. */
